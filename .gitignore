@@ -1,6 +1,7 @@
 android/.idea/
 android/.gradle/
 android/.kotlin/
+android/**/build/
 android/build/
 android/gradle/*
 !android/gradle/libs.versions.toml
