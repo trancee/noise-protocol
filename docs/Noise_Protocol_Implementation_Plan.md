@@ -87,7 +87,7 @@ Noise_XX_<DH>_<AEAD>_<HASH>
 
 ### Default profile (baseline)
 
-Noise_XX_25519_ChaChaPoly_BLAKE2s
+Noise_XX_25519_AESGCM_SHA256
 
 ### Supported variations (pluggable)
 

@@ -21,6 +21,19 @@ class CryptoProviderTest {
     }
 
     @Test
+    fun createDefaultConfigurationUsesNoiseXx25519AesGcmSha256() {
+        val provider = CryptoProvider()
+        val configuration = provider.createDefaultConfiguration()
+
+        assertEquals("Noise_XX_25519_AESGCM_SHA256", configuration.protocolName)
+        assertEquals(HandshakePattern.XX, configuration.pattern)
+        assertTrue(configuration.suite.diffieHellman is X25519DiffieHellmanAdapter)
+        assertTrue(configuration.suite.cipher is AesGcmCipherAdapter)
+        assertTrue(configuration.suite.hash is Sha256HashAdapter)
+        assertTrue(configuration.suite.keyDerivation is HkdfSha256Adapter)
+    }
+
+    @Test
     fun encryptDecryptRoundTripForChaCha20Poly1305() {
         val cipher = ChaCha20Poly1305CipherAdapter()
         val ciphertext = cipher.encrypt(key, nonce, associatedData, plaintext)

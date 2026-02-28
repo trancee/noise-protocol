@@ -12,7 +12,7 @@ public struct NoiseProtocolDescriptor: Sendable, Hashable {
     }
 
     public static let bootstrapDefault = NoiseProtocolDescriptor(
-        rawValue: "Noise_XX_25519_ChaChaPoly_BLAKE2s"
+        rawValue: "Noise_XX_25519_AESGCM_SHA256"
     )
 }
 

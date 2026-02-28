@@ -27,7 +27,7 @@ The test harness MUST ensure:
 Golden vectors are authoritative and MUST pass.
 
 Each vector includes:
-- Protocol name (e.g. Noise_XX_25519_ChaChaPoly_BLAKE2s)
+- Protocol name (e.g. Noise_XX_25519_AESGCM_SHA256)
 - Initiator static key pair
 - Responder static key pair
 - Forced ephemeral key pairs

@@ -54,59 +54,78 @@ dependencies {
 }
 ```
 
-### 2) Build a crypto suite
+### 2) Build the default Noise configuration
 
 ```kotlin
 import noise.protocol.crypto.CryptoProvider
-import noise.protocol.crypto.NoiseAeadAlgorithm
-import noise.protocol.crypto.NoiseCryptoAlgorithms
-import noise.protocol.crypto.NoiseDhAlgorithm
-import noise.protocol.crypto.NoiseHashAlgorithm
 
 val provider = CryptoProvider()
-val suite = provider.createSuite(
-    NoiseCryptoAlgorithms(
-        dh = NoiseDhAlgorithm.X25519,
-        aead = NoiseAeadAlgorithm.CHACHA20_POLY1305,
-        hash = NoiseHashAlgorithm.SHA256
-    )
-)
+val defaultConfig = provider.createDefaultConfiguration()
+val suite = defaultConfig.suite
+// defaultConfig.pattern == HandshakePattern.XX
+// defaultConfig.protocolName == "Noise_XX_25519_AESGCM_SHA256"
 ```
 
-### 3) Run a handshake (NN example)
+### 3) Run a handshake (default XX profile)
 
 ```kotlin
-import noise.protocol.core.HandshakePattern
 import noise.protocol.core.HandshakeRole
 import noise.protocol.core.HandshakeState
 
+val initiatorStatic = suite.diffieHellman.generateKeyPair()
+val responderStatic = suite.diffieHellman.generateKeyPair()
+
 val initiator = HandshakeState.initialize(
-    pattern = HandshakePattern.NN,
+    pattern = defaultConfig.pattern,
     role = HandshakeRole.INITIATOR,
     cryptoSuite = suite,
-    protocolName = "Noise_NN_25519_ChaChaPoly_SHA256"
+    protocolName = defaultConfig.protocolName,
+    localStatic = initiatorStatic,
+    remoteStatic = responderStatic.publicKey
 )
 val responder = HandshakeState.initialize(
-    pattern = HandshakePattern.NN,
+    pattern = defaultConfig.pattern,
     role = HandshakeRole.RESPONDER,
     cryptoSuite = suite,
-    protocolName = "Noise_NN_25519_ChaChaPoly_SHA256"
+    protocolName = defaultConfig.protocolName,
+    localStatic = responderStatic,
+    remoteStatic = initiatorStatic.publicKey
 )
 
 val m1 = initiator.writeMessage("hello".encodeToByteArray())
-val r1 = responder.readMessage(m1)
+responder.readMessage(m1)
 
 val m2 = responder.writeMessage("world".encodeToByteArray())
-val r2 = initiator.readMessage(m2)
+initiator.readMessage(m2)
 
-check(String(r1) == "hello")
-check(String(r2) == "world")
+val m3 = initiator.writeMessage("done".encodeToByteArray())
+responder.readMessage(m3)
+
 check(initiator.isComplete() && responder.isComplete())
 
 val (tx, rx) = initiator.splitTransportStates()
 ```
 
-For `NK`, `KK`, `IK`, and `XX`, provide required static key material in `HandshakeState.initialize(...)`.
+### 4) Use a different crypto suite
+
+```kotlin
+import noise.protocol.core.HandshakePattern
+import noise.protocol.crypto.NoiseAeadAlgorithm
+import noise.protocol.crypto.NoiseCryptoAlgorithms
+import noise.protocol.crypto.NoiseDhAlgorithm
+import noise.protocol.crypto.NoiseHashAlgorithm
+
+val customAlgorithms = NoiseCryptoAlgorithms(
+    dh = NoiseDhAlgorithm.X25519,
+    aead = NoiseAeadAlgorithm.CHACHA20_POLY1305,
+    hash = NoiseHashAlgorithm.SHA512
+)
+val customSuite = provider.createSuite(customAlgorithms)
+val customPattern = HandshakePattern.XX
+val customProtocolName = "Noise_XX_25519_ChaChaPoly_SHA512"
+```
+
+Use `customSuite`, `customPattern`, and `customProtocolName` in `HandshakeState.initialize(...)` on both peers.
 
 ## iOS usage (Swift)
 
@@ -122,26 +141,19 @@ Example (`Package.swift`):
   - `NoiseCore`
   - `NoiseCryptoAdapters`
 
-### 2) Build a crypto provider
+### 2) Build the default Noise configuration
 
 ```swift
 import Foundation
 import NoiseCore
 import NoiseCryptoAdapters
 
-let registry = NoiseCryptoAdapterRegistry(registeringBuiltIns: true)
-let factory = NoiseCryptoAdapterFactory(registry: registry)
-
-let suite = NoiseCryptoSuiteDescriptor(
-    protocolName: NoiseProtocolDescriptor(rawValue: "Noise_NN_25519_ChaChaPoly_SHA256"),
-    diffieHellman: "25519",
-    cipher: "ChaChaPoly",
-    hash: "SHA256"
-)
-let provider = try await factory.makeProvider(for: suite)
+let factory = NoiseCryptoAdapterFactory()
+let suite = NoiseCryptoSuiteDescriptor.bootstrapDefault
+let provider = try await factory.makeBootstrapDefaultProvider()
 ```
 
-### 3) Run a handshake session (NN example)
+### 3) Run a handshake session (default XX profile)
 
 ```swift
 import Foundation
@@ -149,29 +161,55 @@ import NoiseCore
 
 let initiatorSession = NoiseHandshakeSession()
 let responderSession = NoiseHandshakeSession()
+let initiatorStatic = try provider.diffieHellman.generateKeyPair()
+let responderStatic = try provider.diffieHellman.generateKeyPair()
 
 let initiatorConfig = NoiseHandshakeConfiguration(
-    protocolName: NoiseProtocolDescriptor(rawValue: "Noise_NN_25519_ChaChaPoly_SHA256"),
+    protocolName: suite.protocolName,
     isInitiator: true,
-    handshakePattern: .nn
+    handshakePattern: .xx,
+    localStaticKey: initiatorStatic,
+    remoteStaticKey: responderStatic.publicKey
 )
 let responderConfig = NoiseHandshakeConfiguration(
-    protocolName: NoiseProtocolDescriptor(rawValue: "Noise_NN_25519_ChaChaPoly_SHA256"),
+    protocolName: suite.protocolName,
     isInitiator: false,
-    handshakePattern: .nn
+    handshakePattern: .xx,
+    localStaticKey: responderStatic,
+    remoteStaticKey: initiatorStatic.publicKey
 )
 
 try await initiatorSession.initialize(with: initiatorConfig, cryptoProvider: provider)
 try await responderSession.initialize(with: responderConfig, cryptoProvider: provider)
 
 let m1 = try await initiatorSession.writeMessage(payload: Data("hello".utf8))
-let r1 = try await responderSession.readMessage(m1)
+_ = try await responderSession.readMessage(m1)
 
 let m2 = try await responderSession.writeMessage(payload: Data("world".utf8))
-let r2 = try await initiatorSession.readMessage(m2)
+_ = try await initiatorSession.readMessage(m2)
+
+let m3 = try await initiatorSession.writeMessage(payload: Data("done".utf8))
+_ = try await responderSession.readMessage(m3)
 
 let transport = try await initiatorSession.splitTransportStates()
 ```
+
+### 4) Use a different crypto suite
+
+```swift
+import NoiseCore
+import NoiseCryptoAdapters
+
+let customSuite = NoiseCryptoSuiteDescriptor(
+    protocolName: NoiseProtocolDescriptor(rawValue: "Noise_XX_25519_ChaChaPoly_SHA512"),
+    diffieHellman: "25519",
+    cipher: "ChaChaPoly",
+    hash: "SHA512"
+)
+let customProvider = try await factory.makeProvider(for: customSuite)
+```
+
+Use `customSuite.protocolName` and `customProvider` when initializing both handshake sessions.
 
 ## Verify locally
 

@@ -301,6 +301,15 @@ public struct NoiseCryptoSuiteDescriptor: Sendable, Equatable {
     }
 }
 
+public extension NoiseCryptoSuiteDescriptor {
+    static let bootstrapDefault = NoiseCryptoSuiteDescriptor(
+        protocolName: .bootstrapDefault,
+        diffieHellman: "25519",
+        cipher: "AESGCM",
+        hash: "SHA256"
+    )
+}
+
 public struct NoiseAdapterCatalog: Sendable, Equatable {
     public var diffieHellman: [String]
     public var ciphers: [String]
@@ -454,6 +463,10 @@ public struct NoiseCryptoAdapterFactory: Sendable {
 
     public init(registry: NoiseCryptoAdapterRegistry = .builtIn()) {
         self.registry = registry
+    }
+
+    public func makeBootstrapDefaultProvider() async throws -> NoiseCryptoProvider {
+        try await makeProvider(for: .bootstrapDefault)
     }
 
     public func makeProvider(for descriptor: NoiseCryptoSuiteDescriptor) async throws -> NoiseCryptoProvider {

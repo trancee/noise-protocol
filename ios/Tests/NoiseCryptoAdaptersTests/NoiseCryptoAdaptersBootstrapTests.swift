@@ -134,3 +134,17 @@ func registryAndFactoryWiring() async throws {
         #expect(error == .unsupportedCipher("UnknownCipher"))
     }
 }
+
+@Test("Factory exposes Noise_XX_25519_AESGCM_SHA256 default provider")
+func bootstrapDefaultProvider() async throws {
+    #expect(NoiseCryptoSuiteDescriptor.bootstrapDefault.protocolName.rawValue == "Noise_XX_25519_AESGCM_SHA256")
+    #expect(NoiseCryptoSuiteDescriptor.bootstrapDefault.diffieHellman == "25519")
+    #expect(NoiseCryptoSuiteDescriptor.bootstrapDefault.cipher == "AESGCM")
+    #expect(NoiseCryptoSuiteDescriptor.bootstrapDefault.hash == "SHA256")
+
+    let factory = NoiseCryptoAdapterFactory(registry: .builtIn())
+    let provider = try await factory.makeBootstrapDefaultProvider()
+    let keyPair = try provider.diffieHellman.generateKeyPair()
+    #expect(keyPair.privateKey.count == 32)
+    #expect(keyPair.publicKey.count == 32)
+}

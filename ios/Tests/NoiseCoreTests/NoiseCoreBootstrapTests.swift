@@ -7,7 +7,7 @@ import Testing
 @Test("Core bootstrap exposes default protocol profile")
 func bootstrapDefaultProtocolProfile() {
     #expect(NoiseCoreVersion.specificationRevision == 34)
-    #expect(NoiseProtocolDescriptor.bootstrapDefault.rawValue == "Noise_XX_25519_ChaChaPoly_BLAKE2s")
+    #expect(NoiseProtocolDescriptor.bootstrapDefault.rawValue == "Noise_XX_25519_AESGCM_SHA256")
 }
 
 @Test("Pattern table ordering is correct for NN/NK/KK/IK/XX")

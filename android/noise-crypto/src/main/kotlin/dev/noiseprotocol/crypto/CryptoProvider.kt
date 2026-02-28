@@ -23,6 +23,12 @@ data class NoiseCryptoAlgorithms(
     val hash: NoiseHashAlgorithm = NoiseHashAlgorithm.SHA256
 )
 
+data class NoiseDefaultConfiguration(
+    val protocolName: String,
+    val pattern: HandshakePattern,
+    val suite: NoiseCryptoSuite
+)
+
 enum class NoiseDhAlgorithm {
     X25519,
     X448
@@ -44,6 +50,14 @@ open class CryptoProvider(
     override val id: String = "android-custom"
 ) : NoiseCryptoSuiteProvider {
     override fun supports(pattern: HandshakePattern): Boolean = true
+
+    fun createDefaultSuite(): NoiseCryptoSuite = createSuite(DEFAULT_ALGORITHMS)
+
+    fun createDefaultConfiguration(): NoiseDefaultConfiguration = NoiseDefaultConfiguration(
+        protocolName = DEFAULT_PROTOCOL_NAME,
+        pattern = HandshakePattern.XX,
+        suite = createDefaultSuite()
+    )
 
     override fun createSuite(algorithms: NoiseCryptoAlgorithms): NoiseCryptoSuite {
         val hash = when (algorithms.hash) {
@@ -72,6 +86,15 @@ open class CryptoProvider(
             keyDerivation = hkdf,
             cipher = cipher,
             diffieHellman = diffieHellman
+        )
+    }
+
+    companion object {
+        const val DEFAULT_PROTOCOL_NAME: String = "Noise_XX_25519_AESGCM_SHA256"
+        val DEFAULT_ALGORITHMS: NoiseCryptoAlgorithms = NoiseCryptoAlgorithms(
+            dh = NoiseDhAlgorithm.X25519,
+            aead = NoiseAeadAlgorithm.AES_GCM,
+            hash = NoiseHashAlgorithm.SHA256
         )
     }
 
