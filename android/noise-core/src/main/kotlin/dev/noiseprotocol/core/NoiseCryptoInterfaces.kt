@@ -1,4 +1,4 @@
-package dev.noiseprotocol.core
+package noise.protocol.core
 
 data class NoiseKeyPair(
     val privateKey: ByteArray,

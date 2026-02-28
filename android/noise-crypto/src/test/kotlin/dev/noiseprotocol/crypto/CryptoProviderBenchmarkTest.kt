@@ -1,12 +1,12 @@
-package dev.noiseprotocol.crypto
+package noise.protocol.crypto
 
-import dev.noiseprotocol.core.HandshakePattern
-import dev.noiseprotocol.core.HandshakeRole
-import dev.noiseprotocol.core.HandshakeState
-import dev.noiseprotocol.core.MessageDirection
-import dev.noiseprotocol.core.NoiseCryptoSuite
-import dev.noiseprotocol.core.NoiseDiffieHellmanFunction
-import dev.noiseprotocol.core.NoiseKeyPair
+import noise.protocol.core.HandshakePattern
+import noise.protocol.core.HandshakeRole
+import noise.protocol.core.HandshakeState
+import noise.protocol.core.MessageDirection
+import noise.protocol.core.NoiseCryptoSuite
+import noise.protocol.core.NoiseDiffieHellmanFunction
+import noise.protocol.core.NoiseKeyPair
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue

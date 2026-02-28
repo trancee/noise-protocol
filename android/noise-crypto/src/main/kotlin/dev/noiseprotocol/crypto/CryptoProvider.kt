@@ -1,11 +1,11 @@
-package dev.noiseprotocol.crypto
+package noise.protocol.crypto
 
-import dev.noiseprotocol.core.HandshakePattern
-import dev.noiseprotocol.core.NoiseCipherFunction
-import dev.noiseprotocol.core.NoiseCryptoSuite
-import dev.noiseprotocol.core.NoiseDiffieHellmanFunction
-import dev.noiseprotocol.core.NoiseHashFunction
-import dev.noiseprotocol.core.NoiseKeyDerivationFunction
+import noise.protocol.core.HandshakePattern
+import noise.protocol.core.NoiseCipherFunction
+import noise.protocol.core.NoiseCryptoSuite
+import noise.protocol.core.NoiseDiffieHellmanFunction
+import noise.protocol.core.NoiseHashFunction
+import noise.protocol.core.NoiseKeyDerivationFunction
 
 interface NoiseProvider {
     val id: String

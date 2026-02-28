@@ -38,19 +38,19 @@ Example (`build.gradle.kts` in your module):
 
 ```kotlin
 dependencies {
-    implementation("dev.noiseprotocol:noise-core:0.1.0-SNAPSHOT")
-    implementation("dev.noiseprotocol:noise-crypto:0.1.0-SNAPSHOT")
+    implementation("noise.protocol:noise-core:0.1.0-SNAPSHOT")
+    implementation("noise.protocol:noise-crypto:0.1.0-SNAPSHOT")
 }
 ```
 
 ### 2) Build a crypto suite
 
 ```kotlin
-import dev.noiseprotocol.crypto.CryptoProvider
-import dev.noiseprotocol.crypto.NoiseAeadAlgorithm
-import dev.noiseprotocol.crypto.NoiseCryptoAlgorithms
-import dev.noiseprotocol.crypto.NoiseDhAlgorithm
-import dev.noiseprotocol.crypto.NoiseHashAlgorithm
+import noise.protocol.crypto.CryptoProvider
+import noise.protocol.crypto.NoiseAeadAlgorithm
+import noise.protocol.crypto.NoiseCryptoAlgorithms
+import noise.protocol.crypto.NoiseDhAlgorithm
+import noise.protocol.crypto.NoiseHashAlgorithm
 
 val provider = CryptoProvider()
 val suite = provider.createSuite(
@@ -65,9 +65,9 @@ val suite = provider.createSuite(
 ### 3) Run a handshake (NN example)
 
 ```kotlin
-import dev.noiseprotocol.core.HandshakePattern
-import dev.noiseprotocol.core.HandshakeRole
-import dev.noiseprotocol.core.HandshakeState
+import noise.protocol.core.HandshakePattern
+import noise.protocol.core.HandshakeRole
+import noise.protocol.core.HandshakeState
 
 val initiator = HandshakeState.initialize(
     pattern = HandshakePattern.NN,

@@ -1,4 +1,4 @@
-package dev.noiseprotocol.core
+package noise.protocol.core
 
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertEquals

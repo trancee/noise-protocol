@@ -1,6 +1,6 @@
-package dev.noiseprotocol.crypto
+package noise.protocol.crypto
 
-import dev.noiseprotocol.core.HandshakePattern
+import noise.protocol.core.HandshakePattern
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse

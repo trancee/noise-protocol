@@ -1,6 +1,6 @@
-package dev.noiseprotocol.crypto
+package noise.protocol.crypto
 
-import dev.noiseprotocol.core.NoiseCipherFunction
+import noise.protocol.core.NoiseCipherFunction
 import java.security.spec.AlgorithmParameterSpec
 import javax.crypto.AEADBadTagException
 import javax.crypto.BadPaddingException

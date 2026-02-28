@@ -3,6 +3,6 @@ plugins {
 }
 
 allprojects {
-    group = "dev.noiseprotocol"
+    group = "noise.protocol"
     version = "0.1.0-SNAPSHOT"
 }

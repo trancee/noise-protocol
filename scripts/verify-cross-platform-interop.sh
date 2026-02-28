@@ -7,7 +7,7 @@ echo "[interop] Running Android deterministic artifact parity test..."
 (
   cd "$repo_root/android"
   gradle --no-daemon :noise-testing:test --console=plain \
-    --tests dev.noiseprotocol.testing.NoiseTestHarnessTest.deterministicRunMatchesFixtureExpectedArtifacts
+    --tests noise.protocol.testing.NoiseTestHarnessTest.deterministicRunMatchesFixtureExpectedArtifacts
 )
 
 echo "[interop] Running iOS deterministic artifact parity test..."

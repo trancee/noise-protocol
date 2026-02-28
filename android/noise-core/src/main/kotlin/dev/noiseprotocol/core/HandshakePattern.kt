@@ -1,4 +1,4 @@
-package dev.noiseprotocol.core
+package noise.protocol.core
 
 enum class HandshakeRole {
     INITIATOR,

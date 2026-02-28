@@ -12,8 +12,8 @@ echo "[bench] Running Android benchmark tests..."
   gradle --no-daemon --console=plain :noise-core:test :noise-crypto:test --tests '*Benchmark*' >"$android_log"
 )
 
-android_core_xml="$repo_root/android/noise-core/build/test-results/test/TEST-dev.noiseprotocol.core.NoiseCoreBenchmarkTest.xml"
-android_crypto_xml="$repo_root/android/noise-crypto/build/test-results/test/TEST-dev.noiseprotocol.crypto.CryptoProviderBenchmarkTest.xml"
+android_core_xml="$repo_root/android/noise-core/build/test-results/test/TEST-noise.protocol.core.NoiseCoreBenchmarkTest.xml"
+android_crypto_xml="$repo_root/android/noise-crypto/build/test-results/test/TEST-noise.protocol.crypto.CryptoProviderBenchmarkTest.xml"
 
 echo "[bench] Running iOS benchmark tests..."
 (
@@ -95,8 +95,8 @@ swift test --filter NoiseCoreTests
 ### Android benchmark lines
 
 Sources:
-- `android/noise-core/build/test-results/test/TEST-dev.noiseprotocol.core.NoiseCoreBenchmarkTest.xml`
-- `android/noise-crypto/build/test-results/test/TEST-dev.noiseprotocol.crypto.CryptoProviderBenchmarkTest.xml`
+- `android/noise-core/build/test-results/test/TEST-noise.protocol.core.NoiseCoreBenchmarkTest.xml`
+- `android/noise-crypto/build/test-results/test/TEST-noise.protocol.crypto.CryptoProviderBenchmarkTest.xml`
 
 ```text
 {android_block}

@@ -1,7 +1,7 @@
-package dev.noiseprotocol.crypto
+package noise.protocol.crypto
 
-import dev.noiseprotocol.core.NoiseDiffieHellmanFunction
-import dev.noiseprotocol.core.NoiseKeyPair
+import noise.protocol.core.NoiseDiffieHellmanFunction
+import noise.protocol.core.NoiseKeyPair
 import java.math.BigInteger
 import java.security.SecureRandom
 

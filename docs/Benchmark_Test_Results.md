@@ -22,8 +22,8 @@ swift test --filter NoiseCoreTests
 ### Android benchmark lines
 
 Sources:
-- `android/noise-core/build/test-results/test/TEST-dev.noiseprotocol.core.NoiseCoreBenchmarkTest.xml`
-- `android/noise-crypto/build/test-results/test/TEST-dev.noiseprotocol.crypto.CryptoProviderBenchmarkTest.xml`
+- `android/noise-core/build/test-results/test/TEST-noise.protocol.core.NoiseCoreBenchmarkTest.xml`
+- `android/noise-crypto/build/test-results/test/TEST-noise.protocol.crypto.CryptoProviderBenchmarkTest.xml`
 
 ```text
 benchmark noise-core handshake pattern=ik rounds=250 elapsed_ns=1172583 ns_per_op=4690 ops_per_s=213204.52368830182 checksum=65331

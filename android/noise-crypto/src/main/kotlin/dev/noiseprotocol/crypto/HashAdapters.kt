@@ -1,7 +1,7 @@
-package dev.noiseprotocol.crypto
+package noise.protocol.crypto
 
-import dev.noiseprotocol.core.NoiseHashFunction
-import dev.noiseprotocol.core.NoiseKeyDerivationFunction
+import noise.protocol.core.NoiseHashFunction
+import noise.protocol.core.NoiseKeyDerivationFunction
 
 interface NoiseDigest {
     val digestLength: Int
