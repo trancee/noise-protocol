@@ -20,6 +20,17 @@ Current scope:
   - `NoiseTestHarness`
 - `test-vectors/`: shared schema and fixtures
 
+## GitHub releases
+
+- Workflow: `.github/workflows/release.yml`
+- Trigger:
+  - push a tag matching `v*` (for example `v0.1.0`)
+  - manual dispatch with a `tag` input
+- Published release assets:
+  - `noise-android-<tag>.tar.gz` (Android `noise-core`, `noise-crypto`, `noise-testing` JARs)
+  - `noise-ios-swiftpm-<tag>.tar.gz` (Swift Package manifest + Sources)
+  - `SHA256SUMS.txt`
+
 ## Android usage (Kotlin)
 
 ### 1) Add modules
