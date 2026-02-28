@@ -204,3 +204,12 @@ The test harness does NOT attempt to:
 - Test vectors MUST be versioned
 - Noise spec revision MUST be recorded
 - Any change invalidates previous approvals
+
+---
+
+## 12. Shared Vector Contract and Layout
+
+- Canonical schema: `test-vectors/schema/noise-vector-v1.schema.json`
+- Fixtures must declare `schema_version` and follow the matching major folder: `test-vectors/fixtures/v1/`
+- If the contract changes incompatibly, add a new schema file (`...-v2.schema.json`) and write fixtures under `fixtures/v2/`
+- Each fixture must include protocol metadata, input key material/prologue/payloads, expected handshake outputs (messages/hash/split keys), and negative-case metadata

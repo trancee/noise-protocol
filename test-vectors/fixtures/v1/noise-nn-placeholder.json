@@ -1,0 +1,106 @@
+{
+  "$schema": "../../schema/noise-vector-v1.schema.json",
+  "schema_version": "1.0.0",
+  "vector_id": "noise-nn-placeholder",
+  "description": "Deterministic placeholder fixture for shared harness wiring.",
+  "protocol": {
+    "name": "Noise_NN_25519_ChaChaPoly_SHA256",
+    "pattern": "NN",
+    "suite": {
+      "dh": "25519",
+      "cipher": "ChaChaPoly",
+      "hash": "SHA256"
+    }
+  },
+  "inputs": {
+    "prologue": "50726f6c6f6775652d7631",
+    "key_material": {
+      "initiator": {
+        "static": {
+          "private": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+          "public": "202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f"
+        },
+        "ephemeral": {
+          "private": "404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f",
+          "public": "606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f"
+        }
+      },
+      "responder": {
+        "static": {
+          "private": "808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9f",
+          "public": "a0a1a2a3a4a5a6a7a8a9aaabacadaeafb0b1b2b3b4b5b6b7b8b9babbbcbdbebf"
+        },
+        "ephemeral": {
+          "private": "c0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+          "public": "e0e1e2e3e4e5e6e7e8e9eaebecedeeeff0f1f2f3f4f5f6f7f8f9fafbfcfdfeff"
+        }
+      }
+    },
+    "payloads": [
+      {
+        "index": 0,
+        "sender": "initiator",
+        "plaintext_hex": "48656c6c6f"
+      },
+      {
+        "index": 1,
+        "sender": "responder",
+        "plaintext_hex": "776f726c64"
+      }
+    ]
+  },
+  "expected": {
+    "handshake_messages": [
+      {
+        "index": 0,
+        "sender": "initiator",
+        "message_hex": "f0f1f2f3f4f5f6f7f8f9fafbfcfdfeff000102030405060708090a0b0c0d0e0f"
+      },
+      {
+        "index": 1,
+        "sender": "responder",
+        "message_hex": "0f0e0d0c0b0a09080706050403020100fffefdfcfbfaf9f8f7f6f5f4f3f2f1f0"
+      }
+    ],
+    "handshake_hash": "00112233445566778899aabbccddeeffffeeddccbbaa99887766554433221100",
+    "split_transport_keys": {
+      "initiator": {
+        "tx": "101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f",
+        "rx": "303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f"
+      },
+      "responder": {
+        "tx": "303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f",
+        "rx": "101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f"
+      }
+    }
+  },
+  "negative_cases": [
+    {
+      "id": "flip-tag-msg1",
+      "description": "Flip one bit in the final authentication tag on message index 1.",
+      "phase": "handshake",
+      "message_index": 1,
+      "mutation": {
+        "target": "tag",
+        "operation": "flip_last_bit"
+      },
+      "expected_error": {
+        "code": "decrypt_failed",
+        "detail": "Handshake must abort and clear transient state."
+      }
+    },
+    {
+      "id": "reorder-handshake-messages",
+      "description": "Deliver message index 1 before message index 0.",
+      "phase": "handshake",
+      "mutation": {
+        "target": "message_order",
+        "operation": "swap_0_1"
+      },
+      "expected_error": {
+        "code": "unexpected_message_order",
+        "detail": "Implementation must reject out-of-order handshake traffic."
+      }
+    }
+  ]
+}

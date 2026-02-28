@@ -1,0 +1,335 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://noise-protocol.dev/test-vectors/schema/noise-vector-v1.schema.json",
+  "title": "Noise Shared Test Vector Contract v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "vector_id",
+    "protocol",
+    "inputs",
+    "expected",
+    "negative_cases"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1.0.0"
+    },
+    "vector_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]*$"
+    },
+    "description": {
+      "type": "string"
+    },
+    "protocol": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "pattern",
+        "suite"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^Noise_[A-Za-z0-9+_]+_[A-Za-z0-9]+_[A-Za-z0-9]+_[A-Za-z0-9]+$"
+        },
+        "pattern": {
+          "type": "string",
+          "enum": [
+            "NN",
+            "NK",
+            "KK",
+            "IK",
+            "XX"
+          ]
+        },
+        "suite": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "dh",
+            "cipher",
+            "hash"
+          ],
+          "properties": {
+            "dh": {
+              "type": "string",
+              "enum": [
+                "25519",
+                "448"
+              ]
+            },
+            "cipher": {
+              "type": "string",
+              "enum": [
+                "ChaChaPoly",
+                "AESGCM"
+              ]
+            },
+            "hash": {
+              "type": "string",
+              "enum": [
+                "SHA256",
+                "SHA512",
+                "BLAKE2s",
+                "BLAKE2b"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "inputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "prologue",
+        "key_material",
+        "payloads"
+      ],
+      "properties": {
+        "prologue": {
+          "$ref": "#/$defs/hex"
+        },
+        "key_material": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "initiator",
+            "responder"
+          ],
+          "properties": {
+            "initiator": {
+              "$ref": "#/$defs/party_key_material"
+            },
+            "responder": {
+              "$ref": "#/$defs/party_key_material"
+            }
+          }
+        },
+        "payloads": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "index",
+              "sender",
+              "plaintext_hex"
+            ],
+            "properties": {
+              "index": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "sender": {
+                "$ref": "#/$defs/sender"
+              },
+              "plaintext_hex": {
+                "$ref": "#/$defs/hex"
+              }
+            }
+          }
+        }
+      }
+    },
+    "expected": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "handshake_messages",
+        "handshake_hash",
+        "split_transport_keys"
+      ],
+      "properties": {
+        "handshake_messages": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "index",
+              "sender",
+              "message_hex"
+            ],
+            "properties": {
+              "index": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "sender": {
+                "$ref": "#/$defs/sender"
+              },
+              "message_hex": {
+                "$ref": "#/$defs/non_empty_hex"
+              }
+            }
+          }
+        },
+        "handshake_hash": {
+          "$ref": "#/$defs/non_empty_hex"
+        },
+        "split_transport_keys": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "initiator",
+            "responder"
+          ],
+          "properties": {
+            "initiator": {
+              "$ref": "#/$defs/transport_keys"
+            },
+            "responder": {
+              "$ref": "#/$defs/transport_keys"
+            }
+          }
+        }
+      }
+    },
+    "negative_cases": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "description",
+          "phase",
+          "mutation",
+          "expected_error"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9._-]*$"
+          },
+          "description": {
+            "type": "string"
+          },
+          "phase": {
+            "type": "string",
+            "enum": [
+              "handshake",
+              "transport"
+            ]
+          },
+          "message_index": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "mutation": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "target",
+              "operation"
+            ],
+            "properties": {
+              "target": {
+                "type": "string",
+                "enum": [
+                  "ciphertext",
+                  "tag",
+                  "payload",
+                  "nonce",
+                  "public_key",
+                  "message_order"
+                ]
+              },
+              "operation": {
+                "type": "string"
+              }
+            }
+          },
+          "expected_error": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "detail": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "hex": {
+      "type": "string",
+      "pattern": "^[0-9a-f]*$"
+    },
+    "non_empty_hex": {
+      "type": "string",
+      "pattern": "^[0-9a-f]+$"
+    },
+    "sender": {
+      "type": "string",
+      "enum": [
+        "initiator",
+        "responder"
+      ]
+    },
+    "key_pair": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "private",
+        "public"
+      ],
+      "properties": {
+        "private": {
+          "$ref": "#/$defs/non_empty_hex"
+        },
+        "public": {
+          "$ref": "#/$defs/non_empty_hex"
+        }
+      }
+    },
+    "party_key_material": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "static",
+        "ephemeral"
+      ],
+      "properties": {
+        "static": {
+          "$ref": "#/$defs/key_pair"
+        },
+        "ephemeral": {
+          "$ref": "#/$defs/key_pair"
+        }
+      }
+    },
+    "transport_keys": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tx",
+        "rx"
+      ],
+      "properties": {
+        "tx": {
+          "$ref": "#/$defs/non_empty_hex"
+        },
+        "rx": {
+          "$ref": "#/$defs/non_empty_hex"
+        }
+      }
+    }
+  }
+}

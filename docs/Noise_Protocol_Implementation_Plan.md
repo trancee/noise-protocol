@@ -42,6 +42,22 @@
    - iOS: `ios/Package.swift` (`swift-tools-version` + package pins), `ios/Package.resolved`, and Xcode/CI config files that declare deployment target and Xcode version.
 3. Keep versions immutable between release bumps (no floating ranges, no branch-based dependency refs).
 
+
+### Android bootstrap usage (current scaffold)
+
+- Gradle root: `android/settings.gradle.kts` and `android/build.gradle.kts`
+- Bootstrap modules: `:noise-core`, `:noise-crypto`, `:noise-testing`
+- Build logic is intentionally straightforward for bootstrap (version catalog + module scripts, no convention plugins yet)
+- Run baseline tests: `cd android && gradle test`
+- Current Android APIs are compile-safe Kotlin placeholders with no protocol logic yet.
+
+### iOS bootstrap usage (current scaffold)
+
+- Swift package manifest: `ios/Package.swift`
+- Bootstrap modules: `NoiseCore`, `NoiseCryptoAdapters`, `NoiseTestHarness`
+- Run baseline tests: `cd ios && swift test`
+- Current iOS APIs are compile-safe placeholders with Swift 6 language mode, strict concurrency checks, and warnings treated as errors.
+
 ---
 
 ## 1. Protocol Scope
