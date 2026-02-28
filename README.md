@@ -177,6 +177,15 @@ swift test
 bash ./scripts/verify-cross-platform-interop.sh
 ```
 
+## Run benchmark-oriented tests
+
+```bash
+# Run all benchmark-oriented variations and refresh benchmark results doc
+bash ./scripts/run-benchmarks-and-update-doc.sh
+```
+
+Policy: always use the script above when running benchmarks so `docs/Benchmark_Test_Results.md` stays current.
+
 ## Notes and current limitations
 
 - Android built-in provider supports:

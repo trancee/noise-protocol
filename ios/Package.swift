@@ -34,7 +34,7 @@ let package = Package(
         ),
         .testTarget(
             name: "NoiseCoreTests",
-            dependencies: ["NoiseCore"],
+            dependencies: ["NoiseCore", "NoiseCryptoAdapters"],
             swiftSettings: packageSwiftSettings
         ),
         .testTarget(

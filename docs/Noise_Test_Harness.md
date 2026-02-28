@@ -160,6 +160,13 @@ Rules:
 - Transport allocations count (must be zero)
 - Encryption/decryption throughput
 - Rekey cost
+- Android benchmark-oriented tests include:
+  - `NoiseCoreBenchmarkTest` (tagged `benchmark`) for deterministic handshake throughput across
+    `NN`, `NK`, `KK`, `IK`, and `XX`, plus transport encrypt/decrypt loops.
+  - `JcaCryptoProviderBenchmarkTest` (tagged `benchmark`) for provider crypto-variation coverage:
+    `X25519` + (`ChaCha20-Poly1305` | `AES-GCM`) + (`SHA-256` | `SHA-512`), with explicit
+    unsupported-path reporting for `X448` and `BLAKE2*`.
+  - Metrics are printed as `elapsed_ns`, `ns_per_op`, and `ops_per_s` without timing thresholds.
 
 ---
 
@@ -222,6 +229,9 @@ The test harness does NOT attempt to:
 - `NoiseVectorFixtureLoader` loads v1 fixtures directly from `test-vectors/fixtures/v1/`
 - `NoiseTestHarness.runDeterministic(...)` coordinates deterministic `HandshakeState` execution with injected fixture key material
 - `NoiseTestHarness.runNegativeCase(...)` applies fixture-driven mutation hooks (including tag tamper and handshake message-order mutations) and reports failures as harness results
+- `cd android && gradle --no-daemon :noise-core:test :noise-crypto:test --tests '*Benchmark*'`
+  runs benchmark-oriented Android coverage (core handshake/transport and provider crypto variations)
+  with correctness assertions
 
 ---
 
@@ -231,6 +241,10 @@ The test harness does NOT attempt to:
 - `NoiseVectorRunner.run(_:)` executes deterministic handshake orchestration using `NoiseCore` and crypto adapters selected from the fixture suite metadata.
 - `NoiseVectorRunner.verifyExpected(_:)` compares handshake messages, transcript hash, and split transport keys byte-for-byte against fixture expectations.
 - `NoiseVectorRunner.verifyNegativeCase(_:in:)` applies mutation hooks (tamper/order) and asserts failure codes from fixture negative-case metadata.
+- `cd ios && swift test --filter NoiseCoreTests` runs deterministic benchmark-oriented core tests
+  that cover handshake patterns `NN`, `NK`, `KK`, `IK`, `XX` and built-in iOS suites
+  (`25519` + `ChaChaPoly`/`AESGCM` + `SHA256`/`SHA512`), reporting per-variation and aggregate
+  duration/throughput while still asserting correctness.
 
 ---
 

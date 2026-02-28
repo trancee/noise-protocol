@@ -326,7 +326,7 @@ public struct NoiseSymmetricState: Sendable, Equatable {
             throw NoiseCoreError.invalidHKDFOutput(expected: 2, actual: outputs.count)
         }
         chainingKey = outputs[0]
-        cipherState.initializeKey(outputs[1])
+        cipherState.initializeKey(Data(outputs[1].prefix(32)))
     }
 
     public mutating func encryptAndHash(
@@ -355,8 +355,8 @@ public struct NoiseSymmetricState: Sendable, Equatable {
             throw NoiseCoreError.invalidHKDFOutput(expected: 2, actual: outputs.count)
         }
         return NoiseTransportCipherStates(
-            initiatorToResponder: NoiseCipherState(key: outputs[0], nonce: 0),
-            responderToInitiator: NoiseCipherState(key: outputs[1], nonce: 0)
+            initiatorToResponder: NoiseCipherState(key: Data(outputs[0].prefix(32)), nonce: 0),
+            responderToInitiator: NoiseCipherState(key: Data(outputs[1].prefix(32)), nonce: 0)
         )
     }
 }
