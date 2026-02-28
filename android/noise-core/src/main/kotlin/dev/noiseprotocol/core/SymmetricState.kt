@@ -27,7 +27,7 @@ class SymmetricState(
         require(outputs.size == 2) { "HKDF must return exactly 2 outputs for mixKey." }
 
         chainingKeyValue = outputs[0].copyOf()
-        cipherState.initializeKey(outputs[1])
+        cipherState.initializeKey(outputs[1].copyOf(CIPHER_KEY_LENGTH))
     }
 
     fun encryptAndHash(plaintext: ByteArray): ByteArray {
@@ -46,10 +46,12 @@ class SymmetricState(
         val outputs = keyDerivationFunction.hkdf(chainingKeyValue, EMPTY_BYTE_ARRAY, outputs = 2)
         require(outputs.size == 2) { "HKDF must return exactly 2 outputs for split." }
 
-        return CipherState(cipherFunction, outputs[0]) to CipherState(cipherFunction, outputs[1])
+        return CipherState(cipherFunction, outputs[0].copyOf(CIPHER_KEY_LENGTH)) to
+            CipherState(cipherFunction, outputs[1].copyOf(CIPHER_KEY_LENGTH))
     }
 
     private companion object {
+        const val CIPHER_KEY_LENGTH = 32
         val EMPTY_BYTE_ARRAY = ByteArray(0)
     }
 }

@@ -9,7 +9,7 @@ import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.IvParameterSpec
 import javax.crypto.spec.SecretKeySpec
 
-abstract class JcaAeadCipherAdapter(
+abstract class AeadCipherAdapter(
     private val transformation: String,
     private val keyAlgorithm: String
 ) : NoiseCipherFunction {
@@ -71,7 +71,7 @@ abstract class JcaAeadCipherAdapter(
     }
 }
 
-class ChaCha20Poly1305CipherAdapter : JcaAeadCipherAdapter(
+class ChaCha20Poly1305CipherAdapter : AeadCipherAdapter(
     transformation = "ChaCha20-Poly1305",
     keyAlgorithm = "ChaCha20"
 ) {
@@ -80,7 +80,7 @@ class ChaCha20Poly1305CipherAdapter : JcaAeadCipherAdapter(
     override fun parameterSpec(nonce: ByteArray): AlgorithmParameterSpec = IvParameterSpec(nonce)
 }
 
-class AesGcmCipherAdapter : JcaAeadCipherAdapter(
+class AesGcmCipherAdapter : AeadCipherAdapter(
     transformation = "AES/GCM/NoPadding",
     keyAlgorithm = "AES"
 ) {

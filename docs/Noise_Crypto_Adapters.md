@@ -9,14 +9,14 @@ No protocol logic is allowed here.
 ## Android implementation status (`android/noise-crypto`)
 
 Current adapter set:
-- DH: `X25519DiffieHellmanAdapter` (`NoiseDhAlgorithm.X25519`)
+- DH: `X25519DiffieHellmanAdapter` (`NoiseDhAlgorithm.X25519`), `X448DiffieHellmanAdapter` (`NoiseDhAlgorithm.X448`)
 - AEAD: `ChaCha20Poly1305CipherAdapter`, `AesGcmCipherAdapter`
-- Hash/HKDF: `Sha256HashAdapter` + `HkdfSha256Adapter`, `Sha512HashAdapter` + `HkdfSha512Adapter`
-- Provider wiring: `JcaCryptoProvider#createSuite(...)` returns a `NoiseCryptoSuite` for `noise-core`
-
-Extension points (explicit TODO without extra dependency):
-- `NoiseDhAlgorithm.X448` is reserved and currently throws `UnsupportedOperationException`
-- `NoiseHashAlgorithm.BLAKE2S` and `NoiseHashAlgorithm.BLAKE2B` are reserved and currently throw `UnsupportedOperationException`
+- Hash/HKDF:
+  - `Sha256HashAdapter` + `HkdfSha256Adapter`
+  - `Sha512HashAdapter` + `HkdfSha512Adapter`
+  - `Blake2sHashAdapter` + `HkdfBlake2sAdapter`
+  - `Blake2bHashAdapter` + `HkdfBlake2bAdapter`
+- Provider wiring: `CryptoProvider#createSuite(...)` returns a `NoiseCryptoSuite` for `noise-core`
 
 Adapter contract alignment:
 - ChaCha20-Poly1305 nonce format: 32-bit zero prefix + 64-bit little-endian counter
@@ -73,6 +73,7 @@ Properties:
 
 Examples:
 - BLAKE2s
+- BLAKE2b
 - SHA-256
 - SHA-512
 

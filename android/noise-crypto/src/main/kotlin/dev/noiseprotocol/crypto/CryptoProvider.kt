@@ -7,13 +7,13 @@ import dev.noiseprotocol.core.NoiseDiffieHellmanFunction
 import dev.noiseprotocol.core.NoiseHashFunction
 import dev.noiseprotocol.core.NoiseKeyDerivationFunction
 
-interface CryptoProvider {
+interface NoiseProvider {
     val id: String
 
     fun supports(pattern: HandshakePattern): Boolean
 }
 
-interface NoiseCryptoSuiteProvider : CryptoProvider {
+interface NoiseCryptoSuiteProvider : NoiseProvider {
     fun createSuite(algorithms: NoiseCryptoAlgorithms = NoiseCryptoAlgorithms()): NoiseCryptoSuite
 }
 
@@ -40,8 +40,8 @@ enum class NoiseHashAlgorithm {
     BLAKE2B
 }
 
-open class JcaCryptoProvider(
-    override val id: String = "android-jca"
+open class CryptoProvider(
+    override val id: String = "android-custom"
 ) : NoiseCryptoSuiteProvider {
     override fun supports(pattern: HandshakePattern): Boolean = true
 
@@ -49,14 +49,14 @@ open class JcaCryptoProvider(
         val hash = when (algorithms.hash) {
             NoiseHashAlgorithm.SHA256 -> Sha256HashAdapter()
             NoiseHashAlgorithm.SHA512 -> Sha512HashAdapter()
-            NoiseHashAlgorithm.BLAKE2S,
-            NoiseHashAlgorithm.BLAKE2B -> unsupportedHash(algorithms.hash)
+            NoiseHashAlgorithm.BLAKE2S -> Blake2sHashAdapter()
+            NoiseHashAlgorithm.BLAKE2B -> Blake2bHashAdapter()
         }
         val hkdf = when (algorithms.hash) {
             NoiseHashAlgorithm.SHA256 -> HkdfSha256Adapter()
             NoiseHashAlgorithm.SHA512 -> HkdfSha512Adapter()
-            NoiseHashAlgorithm.BLAKE2S,
-            NoiseHashAlgorithm.BLAKE2B -> unsupportedHash(algorithms.hash)
+            NoiseHashAlgorithm.BLAKE2S -> HkdfBlake2sAdapter()
+            NoiseHashAlgorithm.BLAKE2B -> HkdfBlake2bAdapter()
         }
         val cipher = when (algorithms.aead) {
             NoiseAeadAlgorithm.CHACHA20_POLY1305 -> ChaCha20Poly1305CipherAdapter()
@@ -64,9 +64,7 @@ open class JcaCryptoProvider(
         }
         val diffieHellman = when (algorithms.dh) {
             NoiseDhAlgorithm.X25519 -> X25519DiffieHellmanAdapter()
-            NoiseDhAlgorithm.X448 -> throw UnsupportedOperationException(
-                "X448 is reserved as an adapter extension point and is not implemented yet."
-            )
+            NoiseDhAlgorithm.X448 -> X448DiffieHellmanAdapter()
         }
 
         return DefaultNoiseCryptoSuite(
@@ -77,11 +75,6 @@ open class JcaCryptoProvider(
         )
     }
 
-    private fun unsupportedHash(algorithm: NoiseHashAlgorithm): Nothing {
-        throw UnsupportedOperationException(
-            "$algorithm is reserved as an adapter extension point and requires an external provider."
-        )
-    }
 }
 
 data class DefaultNoiseCryptoSuite(
@@ -91,5 +84,5 @@ data class DefaultNoiseCryptoSuite(
     override val diffieHellman: NoiseDiffieHellmanFunction
 ) : NoiseCryptoSuite
 
-@Deprecated("Use JcaCryptoProvider.")
-typealias PlaceholderCryptoProvider = JcaCryptoProvider
+@Deprecated("Use CryptoProvider.")
+typealias PlaceholderCryptoProvider = CryptoProvider

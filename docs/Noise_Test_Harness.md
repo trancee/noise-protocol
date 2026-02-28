@@ -163,9 +163,9 @@ Rules:
 - Android benchmark-oriented tests include:
   - `NoiseCoreBenchmarkTest` (tagged `benchmark`) for deterministic handshake throughput across
     `NN`, `NK`, `KK`, `IK`, and `XX`, plus transport encrypt/decrypt loops.
-  - `JcaCryptoProviderBenchmarkTest` (tagged `benchmark`) for provider crypto-variation coverage:
-    `X25519` + (`ChaCha20-Poly1305` | `AES-GCM`) + (`SHA-256` | `SHA-512`), with explicit
-    unsupported-path reporting for `X448` and `BLAKE2*`.
+  - `CryptoProviderBenchmarkTest` (tagged `benchmark`) for provider crypto-variation coverage:
+    (`X25519` | `X448`) + (`ChaCha20-Poly1305` | `AES-GCM`) +
+    (`SHA-256` | `SHA-512` | `BLAKE2s` | `BLAKE2b`).
   - Metrics are printed as `elapsed_ns`, `ns_per_op`, and `ops_per_s` without timing thresholds.
 
 ---

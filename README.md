@@ -46,13 +46,13 @@ dependencies {
 ### 2) Build a crypto suite
 
 ```kotlin
-import dev.noiseprotocol.crypto.JcaCryptoProvider
+import dev.noiseprotocol.crypto.CryptoProvider
 import dev.noiseprotocol.crypto.NoiseAeadAlgorithm
 import dev.noiseprotocol.crypto.NoiseCryptoAlgorithms
 import dev.noiseprotocol.crypto.NoiseDhAlgorithm
 import dev.noiseprotocol.crypto.NoiseHashAlgorithm
 
-val provider = JcaCryptoProvider()
+val provider = CryptoProvider()
 val suite = provider.createSuite(
     NoiseCryptoAlgorithms(
         dh = NoiseDhAlgorithm.X25519,
@@ -189,10 +189,9 @@ Policy: always use the script above when running benchmarks so `docs/Benchmark_T
 ## Notes and current limitations
 
 - Android built-in provider supports:
-  - DH: `X25519`
+  - DH: `X25519`, `X448`
   - AEAD: `ChaCha20-Poly1305`, `AES-GCM`
-  - Hash/HKDF: `SHA-256`, `SHA-512`
-- Android `X448` and `BLAKE2*` are extension points and are not implemented in built-ins.
+  - Hash/HKDF: `SHA-256`, `SHA-512`, `BLAKE2s`, `BLAKE2b`
 - iOS built-in registry ships:
   - DH: `25519`
   - Ciphers: `ChaChaPoly`, `AESGCM`

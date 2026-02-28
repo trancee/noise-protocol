@@ -1,7 +1,7 @@
 package dev.noiseprotocol.testing
 
 import dev.noiseprotocol.core.HandshakePattern
-import dev.noiseprotocol.crypto.JcaCryptoProvider
+import dev.noiseprotocol.crypto.CryptoProvider
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -13,7 +13,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 class NoiseTestHarnessTest {
-    private val harness = NoiseTestHarness(JcaCryptoProvider())
+    private val harness = NoiseTestHarness(CryptoProvider())
 
     @Test
     fun loadsSharedFixtureFromRepositoryVectors() {
