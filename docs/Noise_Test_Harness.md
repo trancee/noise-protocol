@@ -231,3 +231,10 @@ The test harness does NOT attempt to:
 - `NoiseVectorRunner.run(_:)` executes deterministic handshake orchestration using `NoiseCore` and crypto adapters selected from the fixture suite metadata.
 - `NoiseVectorRunner.verifyExpected(_:)` compares handshake messages, transcript hash, and split transport keys byte-for-byte against fixture expectations.
 - `NoiseVectorRunner.verifyNegativeCase(_:in:)` applies mutation hooks (tamper/order) and asserts failure codes from fixture negative-case metadata.
+
+---
+
+## 15. Cross-Platform Interop Verification Command
+
+- Run `./scripts/verify-cross-platform-interop.sh` from the repository root.
+- The command executes Android and iOS deterministic artifact checks against the same shared fixture contract and fails if either platform diverges on handshake messages, handshake hash, or split keys.

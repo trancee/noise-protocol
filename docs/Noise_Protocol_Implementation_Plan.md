@@ -48,7 +48,7 @@
 - Gradle root: `android/settings.gradle.kts` and `android/build.gradle.kts`
 - Bootstrap modules: `:noise-core`, `:noise-crypto`, `:noise-testing`
 - Build logic is intentionally straightforward for bootstrap (version catalog + module scripts, no convention plugins yet)
-- Run baseline tests: `cd android && gradle test`
+- Run baseline tests: `cd android && gradle --no-daemon --console=plain :noise-core:test :noise-crypto:test :noise-testing:test`
 - Current Android APIs are compile-safe Kotlin placeholders with no protocol logic yet.
 
 ### iOS bootstrap usage (current scaffold)
@@ -57,6 +57,25 @@
 - Bootstrap modules: `NoiseCore`, `NoiseCryptoAdapters`, `NoiseTestHarness`
 - Run baseline tests: `cd ios && swift test`
 - Current iOS APIs are compile-safe placeholders with Swift 6 language mode, strict concurrency checks, and warnings treated as errors.
+
+### Local verification commands (developer workflow)
+
+- Android module tests: `cd android && gradle --no-daemon --console=plain :noise-core:test :noise-crypto:test :noise-testing:test`
+- iOS Swift package tests: `cd ios && swift test`
+- Cross-platform deterministic interop check: `./scripts/verify-cross-platform-interop.sh`
+
+### CI validation matrix (current scaffold)
+
+- Workflow: `.github/workflows/ci.yml`
+- Android job (`ubuntu-24.04`, Java 17, Gradle 8.10.2): `cd android && gradle --no-daemon --console=plain :noise-core:test :noise-crypto:test :noise-testing:test`
+- iOS job (`macos-15`, Xcode 16.1): `cd ios && swift test`
+- Cross-platform interop job (`macos-15`, Xcode 16.1, Java 17, Gradle 8.10.2): `./scripts/verify-cross-platform-interop.sh`
+
+### Dependency update policy (Dependabot)
+
+- Config file: `.github/dependabot.yml`
+- Weekly update PRs are enabled for `github-actions` (`/`), `gradle` (`/android`), and `swift` (`/ios`).
+- Dependabot is limited to patch/minor updates; major version bumps stay manual in dedicated version-bump PRs that must pass the full Android+iOS+interop matrix before merge.
 
 ---
 

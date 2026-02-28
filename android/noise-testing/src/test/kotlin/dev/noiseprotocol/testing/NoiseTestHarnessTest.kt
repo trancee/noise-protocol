@@ -2,6 +2,7 @@ package dev.noiseprotocol.testing
 
 import dev.noiseprotocol.core.HandshakePattern
 import dev.noiseprotocol.crypto.JcaCryptoProvider
+import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
@@ -30,7 +31,7 @@ class NoiseTestHarnessTest {
     }
 
     @Test
-    fun deterministicRunReturnsPassShape() {
+    fun deterministicRunMatchesFixtureExpectedArtifacts() {
         val fixture = harness.loadFixture(sharedFixturePath("noise-nn-placeholder.json"))
 
         val result = harness.runDeterministic(fixture)
@@ -38,8 +39,27 @@ class NoiseTestHarnessTest {
         assertEquals(HarnessRunStatus.PASS, result.status)
         assertTrue(result.passed)
         assertNull(result.failure)
-        assertEquals(fixture.protocol.pattern.messages.size, result.transcript.size)
-        assertNotNull(result.transportKeys)
+
+        val expectedMessages = fixture.expected.handshakeMessages.sortedBy { it.index }
+        val actualMessages = result.transcript.sortedBy { it.index }
+        assertEquals(expectedMessages.size, actualMessages.size)
+        expectedMessages.zip(actualMessages).forEach { (expected, actual) ->
+            assertEquals(expected.index, actual.index)
+            assertEquals(expected.sender, actual.sender)
+            assertArrayEquals(expected.message, actual.message)
+        }
+
+        val handshakeHash = result.handshakeHash
+        assertNotNull(handshakeHash)
+        assertArrayEquals(fixture.expected.handshakeHash, handshakeHash)
+
+        val transportKeys = result.transportKeys
+        assertNotNull(transportKeys)
+        requireNotNull(transportKeys)
+        assertArrayEquals(fixture.expected.splitTransportKeys.initiator.tx, transportKeys.initiatorTx)
+        assertArrayEquals(fixture.expected.splitTransportKeys.initiator.rx, transportKeys.initiatorRx)
+        assertArrayEquals(fixture.expected.splitTransportKeys.responder.tx, transportKeys.responderTx)
+        assertArrayEquals(fixture.expected.splitTransportKeys.responder.rx, transportKeys.responderRx)
     }
 
     @Test

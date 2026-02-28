@@ -215,6 +215,7 @@ data class HarnessTransportKeys(
 data class HarnessRunResult(
     val status: HarnessRunStatus,
     val transcript: List<HarnessTranscriptMessage>,
+    val handshakeHash: ByteArray? = null,
     val transportKeys: HarnessTransportKeys? = null,
     val failure: HarnessFailure? = null
 ) {
@@ -546,6 +547,16 @@ class NoiseTestHarness(
             )
         }
 
+        val initiatorHandshakeHash = states.initiator.handshakeHash()
+        val responderHandshakeHash = states.responder.handshakeHash()
+        if (!initiatorHandshakeHash.contentEquals(responderHandshakeHash)) {
+            return failed(
+                code = "handshake_hash_mismatch",
+                detail = "Initiator and responder handshake hashes diverged.",
+                transcript = transcript
+            )
+        }
+
         val initiatorTransport = runCatching { states.initiator.splitTransportStates() }
             .getOrElse { return failedFromThrowable(it, null, transcript) }
         val responderTransport = runCatching { states.responder.splitTransportStates() }
@@ -554,6 +565,7 @@ class NoiseTestHarness(
         return HarnessRunResult(
             status = HarnessRunStatus.PASS,
             transcript = transcript,
+            handshakeHash = initiatorHandshakeHash,
             transportKeys = HarnessTransportKeys(
                 initiatorTx = initiatorTransport.first.keyMaterial(),
                 initiatorRx = initiatorTransport.second.keyMaterial(),
@@ -603,6 +615,7 @@ class NoiseTestHarness(
             pattern = vector.protocol.pattern,
             role = HandshakeRole.INITIATOR,
             cryptoSuite = suite,
+            protocolName = vector.protocol.name,
             prologue = vector.inputs.prologue,
             localStatic = initiatorStatic,
             remoteStatic = responderStatic.publicKey,
@@ -612,6 +625,7 @@ class NoiseTestHarness(
             pattern = vector.protocol.pattern,
             role = HandshakeRole.RESPONDER,
             cryptoSuite = suite,
+            protocolName = vector.protocol.name,
             prologue = vector.inputs.prologue,
             localStatic = responderStatic,
             remoteStatic = initiatorStatic.publicKey,
@@ -705,14 +719,32 @@ class NoiseTestHarness(
     }
 
     private fun encodeMessage(message: HandshakeMessage): ByteArray {
-        val size = message.tokenValues.sumOf { it.data.size } + message.payload.size
+        require(message.tokenValues.size <= UShort.MAX_VALUE.toInt()) {
+            "Handshake message contains too many token payload segments."
+        }
+        require(message.payload.size <= UShort.MAX_VALUE.toInt()) {
+            "Handshake message payload exceeds UInt16 maximum."
+        }
+
+        val size = 2 + message.tokenValues.sumOf { 2 + it.data.size } + 2 + message.payload.size
         val encoded = ByteArray(size)
         var offset = 0
+        fun writeUInt16(value: Int) {
+            encoded[offset] = ((value ushr 8) and 0xFF).toByte()
+            encoded[offset + 1] = (value and 0xFF).toByte()
+            offset += 2
+        }
 
+        writeUInt16(message.tokenValues.size)
         message.tokenValues.forEach { tokenValue ->
+            require(tokenValue.data.size <= UShort.MAX_VALUE.toInt()) {
+                "Handshake token payload exceeds UInt16 maximum."
+            }
+            writeUInt16(tokenValue.data.size)
             tokenValue.data.copyInto(encoded, destinationOffset = offset)
             offset += tokenValue.data.size
         }
+        writeUInt16(message.payload.size)
         message.payload.copyInto(encoded, destinationOffset = offset)
 
         return encoded

@@ -36,6 +36,8 @@ class HandshakeState private constructor(
 
     fun isComplete(): Boolean = messageIndex >= pattern.messages.size
 
+    fun handshakeHash(): ByteArray = symmetricState.handshakeHash
+
     fun writeMessage(payload: ByteArray = EMPTY_BYTE_ARRAY): HandshakeMessage {
         val messagePattern = nextMessagePattern()
         check(messagePattern.direction.isSentBy(role)) { "Expected to read before writing next message." }
@@ -244,6 +246,7 @@ class HandshakeState private constructor(
             pattern: HandshakePattern,
             role: HandshakeRole,
             cryptoSuite: NoiseCryptoSuite,
+            protocolName: String = pattern.protocolName,
             prologue: ByteArray = EMPTY_BYTE_ARRAY,
             localStatic: NoiseKeyPair? = null,
             localEphemeral: NoiseKeyPair? = null,
@@ -255,7 +258,7 @@ class HandshakeState private constructor(
                 hashFunction = cryptoSuite.hash,
                 keyDerivationFunction = cryptoSuite.keyDerivation,
                 cipherFunction = cryptoSuite.cipher,
-                protocolName = pattern.protocolName
+                protocolName = protocolName
             )
             symmetricState.mixHash(prologue)
 

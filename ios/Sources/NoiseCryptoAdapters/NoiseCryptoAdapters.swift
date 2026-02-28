@@ -120,14 +120,19 @@ public struct ChaChaPolyCipherAdapter: NoiseAEADCipherAdapter {
         plaintext: Data
     ) throws -> Data {
         try validate(key: key, algorithm: name)
-        let nonce = try ChaChaPoly.Nonce(data: noiseNonce(nonce))
+        let nonceData = noiseNonce(nonce)
+        let nonce = try ChaChaPoly.Nonce(data: nonceData)
         let sealedBox = try ChaChaPoly.seal(
             plaintext,
             using: SymmetricKey(data: key),
             nonce: nonce,
             authenticating: associatedData
         )
-        return sealedBox.combined
+        var output = Data()
+        output.reserveCapacity(sealedBox.ciphertext.count + sealedBox.tag.count)
+        output.append(sealedBox.ciphertext)
+        output.append(sealedBox.tag)
+        return output
     }
 
     public func decrypt(
@@ -137,7 +142,17 @@ public struct ChaChaPolyCipherAdapter: NoiseAEADCipherAdapter {
         ciphertext: Data
     ) throws -> Data {
         try validate(key: key, algorithm: name)
-        let sealedBox = try ChaChaPoly.SealedBox(combined: ciphertext)
+        guard ciphertext.count >= 16 else {
+            throw NoiseCryptoAdapterError.invalidCiphertext(name)
+        }
+        let nonce = try ChaChaPoly.Nonce(data: noiseNonce(nonce))
+        let encrypted = ciphertext.prefix(ciphertext.count - 16)
+        let tag = ciphertext.suffix(16)
+        let sealedBox = try ChaChaPoly.SealedBox(
+            nonce: nonce,
+            ciphertext: encrypted,
+            tag: tag
+        )
         return try ChaChaPoly.open(
             sealedBox,
             using: SymmetricKey(data: key),
@@ -163,17 +178,19 @@ public struct AESGCMCipherAdapter: NoiseAEADCipherAdapter {
         plaintext: Data
     ) throws -> Data {
         try validate(key: key, algorithm: name)
-        let nonce = try AES.GCM.Nonce(data: noiseNonce(nonce))
+        let nonceData = noiseNonce(nonce)
+        let nonce = try AES.GCM.Nonce(data: nonceData)
         let sealedBox = try AES.GCM.seal(
             plaintext,
             using: SymmetricKey(data: key),
             nonce: nonce,
             authenticating: associatedData
         )
-        guard let combined = sealedBox.combined else {
-            throw NoiseCryptoAdapterError.invalidCiphertext(name)
-        }
-        return combined
+        var output = Data()
+        output.reserveCapacity(sealedBox.ciphertext.count + sealedBox.tag.count)
+        output.append(sealedBox.ciphertext)
+        output.append(sealedBox.tag)
+        return output
     }
 
     public func decrypt(
@@ -183,7 +200,17 @@ public struct AESGCMCipherAdapter: NoiseAEADCipherAdapter {
         ciphertext: Data
     ) throws -> Data {
         try validate(key: key, algorithm: name)
-        let sealedBox = try AES.GCM.SealedBox(combined: ciphertext)
+        guard ciphertext.count >= 16 else {
+            throw NoiseCryptoAdapterError.invalidCiphertext(name)
+        }
+        let nonce = try AES.GCM.Nonce(data: noiseNonce(nonce))
+        let encrypted = ciphertext.prefix(ciphertext.count - 16)
+        let tag = ciphertext.suffix(16)
+        let sealedBox = try AES.GCM.SealedBox(
+            nonce: nonce,
+            ciphertext: encrypted,
+            tag: tag
+        )
         return try AES.GCM.open(
             sealedBox,
             using: SymmetricKey(data: key),

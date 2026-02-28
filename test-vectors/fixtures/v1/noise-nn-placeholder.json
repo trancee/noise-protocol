@@ -54,23 +54,23 @@
       {
         "index": 0,
         "sender": "initiator",
-        "message_hex": "f0f1f2f3f4f5f6f7f8f9fafbfcfdfeff000102030405060708090a0b0c0d0e0f"
+        "message_hex": "0001002079a631eede1bf9c98f12032cdeadd0e7a079398fc786b88cc846ec89af85a51a000548656c6c6f"
       },
       {
         "index": 1,
         "sender": "responder",
-        "message_hex": "0f0e0d0c0b0a09080706050403020100fffefdfcfbfaf9f8f7f6f5f4f3f2f1f0"
+        "message_hex": "00010020dc2cca31e8e43bbd91dff7e475cca3347eb478107d5bd765aba4ae4a30c35d4400158aa2198ed1ac9d712e7cfb5f3cc5e3202652d8e6d8"
       }
     ],
-    "handshake_hash": "00112233445566778899aabbccddeeffffeeddccbbaa99887766554433221100",
+    "handshake_hash": "0cdc4eae809d187a4750de10df59c29e4a026edf95727efaeb18b569ebf9bf8f",
     "split_transport_keys": {
       "initiator": {
-        "tx": "101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f",
-        "rx": "303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f"
+        "tx": "9fb3f835077b5d488dde6c39b30c20cc6123155f94a3ce25b1b0e40c290367b6",
+        "rx": "a00530ba2352ae99009aa4cc2ef9191d19b71baf712758e310624c90bb7df86b"
       },
       "responder": {
-        "tx": "303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f",
-        "rx": "101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f"
+        "tx": "a00530ba2352ae99009aa4cc2ef9191d19b71baf712758e310624c90bb7df86b",
+        "rx": "9fb3f835077b5d488dde6c39b30c20cc6123155f94a3ce25b1b0e40c290367b6"
       }
     }
   },
