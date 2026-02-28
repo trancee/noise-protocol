@@ -1,0 +1,20 @@
+This folder is an Android Kotlin project.
+
+Check the following skills:
+- [Android BLE Expert](../.github/skills/android-ble/SKILL.md)
+- [Android Accessibility Checklist](../.github/skills/android-accessibility/SKILL.md)
+- [Android Modern Architecture & Modularization](../.github/skills/android-architecture/SKILL.md)
+- [Android Coroutines Expert Skill](../.github/skills/android-coroutines/SKILL.md)
+- [Android Data Layer & Offline-First](../.github/skills/android-data-layer/SKILL.md)
+- [Android Emulator Skill](../.github/skills/android-emulator-skill/SKILL.md)
+- [Android Gradle Build Logic & Convention Plugins](../.github/skills/android-gradle-logic/SKILL.md)
+- [Android Networking with Retrofit](../.github/skills/android-retrofit/SKILL.md)
+- [Android Testing Strategies](../.github/skills/android-testing/SKILL.md)
+- [Android ViewModel & State Management](../.github/skills/android-viewmodel/SKILL.md)
+- [Coil for Jetpack Compose](../.github/skills/coil-compose/SKILL.md)
+- [Compose Navigation](../.github/skills/compose-navigation/SKILL.md)
+- [Compose Performance Audit](../.github/skills/compose-performance-audit/SKILL.md)
+- [Jetpack Compose Best Practices](../.github/skills/compose-ui/SKILL.md)
+- [Gradle Build Performance](../.github/skills/gradle-build-performance/SKILL.md)
+- [Kotlin Concurrency Expert](../.github/skills/kotlin-concurrency-expert/SKILL.md)
+- [XML to Compose Migration](../.github/skills/xml-to-compose-migration/SKILL.md)

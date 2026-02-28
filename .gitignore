@@ -1,0 +1,18 @@
+android/.idea/
+android/.gradle/
+android/.kotlin/
+android/build/
+android/gradle/
+android/local.properties
+
+# Gradle wrapper (keep committed)
+!android/gradlew
+!android/gradlew.bat
+!android/gradle/wrapper/gradle-wrapper.jar
+!android/gradle/wrapper/gradle-wrapper.properties
+
+ios/.build/
+xcuserdata/
+*.xcuserstate
+
+.vscode/
