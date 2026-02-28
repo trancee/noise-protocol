@@ -6,6 +6,25 @@ No protocol logic is allowed here.
 
 ---
 
+## Android implementation status (`android/noise-crypto`)
+
+Current adapter set:
+- DH: `X25519DiffieHellmanAdapter` (`NoiseDhAlgorithm.X25519`)
+- AEAD: `ChaCha20Poly1305CipherAdapter`, `AesGcmCipherAdapter`
+- Hash/HKDF: `Sha256HashAdapter` + `HkdfSha256Adapter`, `Sha512HashAdapter` + `HkdfSha512Adapter`
+- Provider wiring: `JcaCryptoProvider#createSuite(...)` returns a `NoiseCryptoSuite` for `noise-core`
+
+Extension points (explicit TODO without extra dependency):
+- `NoiseDhAlgorithm.X448` is reserved and currently throws `UnsupportedOperationException`
+- `NoiseHashAlgorithm.BLAKE2S` and `NoiseHashAlgorithm.BLAKE2B` are reserved and currently throw `UnsupportedOperationException`
+
+Adapter contract alignment:
+- ChaCha20-Poly1305 nonce format: 32-bit zero prefix + 64-bit little-endian counter
+- AES-GCM nonce format: 32-bit zero prefix + 64-bit big-endian counter
+- Rekey behavior: `ENCRYPT(k, 2^64-1, empty, zeroes(32))`, truncated to 32-byte key material
+
+---
+
 ## 1. Diffie-Hellman (DH) Interface
 
 Functions:
@@ -56,6 +75,20 @@ Examples:
 - BLAKE2s
 - SHA-256
 - SHA-512
+
+---
+
+## 3.1 iOS Built-in Adapter Names
+
+`ios/Sources/NoiseCryptoAdapters` provides built-in adapters and registry/factory wiring by algorithm name:
+
+- DH: `25519` -> `Curve25519DiffieHellmanAdapter`
+- AEAD: `ChaChaPoly` -> `ChaChaPolyCipherAdapter`
+- AEAD: `AESGCM` -> `AESGCMCipherAdapter`
+- Hash/HKDF: `SHA256` -> `SHA256HashAdapter`
+- Hash/HKDF: `SHA512` -> `SHA512HashAdapter`
+
+Use `NoiseCryptoAdapterRegistry(registeringBuiltIns: true)` and `NoiseCryptoAdapterFactory` to construct a `NoiseCryptoProvider` from `NoiseCryptoSuiteDescriptor` without adding protocol logic to adapters.
 
 ---
 
