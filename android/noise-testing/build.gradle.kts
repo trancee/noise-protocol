@@ -16,6 +16,7 @@ java {
 dependencies {
     implementation(project(":noise-core"))
     implementation(project(":noise-crypto"))
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0")
 
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly(libs.junit.platform.launcher)

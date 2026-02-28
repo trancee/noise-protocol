@@ -213,3 +213,21 @@ The test harness does NOT attempt to:
 - Fixtures must declare `schema_version` and follow the matching major folder: `test-vectors/fixtures/v1/`
 - If the contract changes incompatibly, add a new schema file (`...-v2.schema.json`) and write fixtures under `fixtures/v2/`
 - Each fixture must include protocol metadata, input key material/prologue/payloads, expected handshake outputs (messages/hash/split keys), and negative-case metadata
+
+---
+
+## 13. Android Harness Usage
+
+- Android module: `android/noise-testing`
+- `NoiseVectorFixtureLoader` loads v1 fixtures directly from `test-vectors/fixtures/v1/`
+- `NoiseTestHarness.runDeterministic(...)` coordinates deterministic `HandshakeState` execution with injected fixture key material
+- `NoiseTestHarness.runNegativeCase(...)` applies fixture-driven mutation hooks (including tag tamper and handshake message-order mutations) and reports failures as harness results
+
+---
+
+## 14. iOS Harness Integration
+
+- `NoiseVectorFixtureLoader` loads shared fixtures from `test-vectors/fixtures/v1/` and decodes the v1 contract.
+- `NoiseVectorRunner.run(_:)` executes deterministic handshake orchestration using `NoiseCore` and crypto adapters selected from the fixture suite metadata.
+- `NoiseVectorRunner.verifyExpected(_:)` compares handshake messages, transcript hash, and split transport keys byte-for-byte against fixture expectations.
+- `NoiseVectorRunner.verifyNegativeCase(_:in:)` applies mutation hooks (tamper/order) and asserts failure codes from fixture negative-case metadata.
