@@ -129,6 +129,8 @@ Use `customSuite`, `customPattern`, and `customProtocolName` in `HandshakeState.
 
 ## iOS usage (Swift)
 
+Requires Swift 6.0 or newer.
+
 ### 1) Add package
 
 Add this repository as a Swift Package dependency and link:
