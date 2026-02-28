@@ -1,0 +1,106 @@
+{
+  "$schema": "../../schema/noise-vector-v1.schema.json",
+  "schema_version": "1.0.0",
+  "vector_id": "noise-ik-25519-chachapoly-blake2b",
+  "description": "Deterministic fixture for Noise_IK_25519_ChaChaPoly_BLAKE2b.",
+  "protocol": {
+    "name": "Noise_IK_25519_ChaChaPoly_BLAKE2b",
+    "pattern": "IK",
+    "suite": {
+      "dh": "25519",
+      "cipher": "ChaChaPoly",
+      "hash": "BLAKE2b"
+    }
+  },
+  "inputs": {
+    "prologue": "70726f6c6f6775652d6e6f6973652d696b2d32353531392d636861636861706f6c792d626c616b653262",
+    "key_material": {
+      "initiator": {
+        "static": {
+          "private": "889a88146b329c4b46c7c9fd5775fde0b9e92c734c500fc6b2cbfbef0ab56d67",
+          "public": "60ee23889019bc833cb355e73471d1002bd96d419d6d89deef1929b9c4c9834e"
+        },
+        "ephemeral": {
+          "private": "d82936ead4f7113996751c3cc81e669e1539c49a9bd7609f834d2dd1cccc637b",
+          "public": "e129d8f91e70a972aa72ac994a5cfdc7dc231267d5bb2b9f75fe823567314d5b"
+        }
+      },
+      "responder": {
+        "static": {
+          "private": "e00b5e1aabb38d468c0e97de66e7cdfeeeed1814bf9392665c6eefb7fafd934e",
+          "public": "4d8b933a4897c98a45589aa0647286d47a7381378a43b34fb42997ba9f8c4114"
+        },
+        "ephemeral": {
+          "private": "98ba60e673107764b0df4145521e8c13ed2bb610e15b480cf5a28c424cf12350",
+          "public": "72b0bde80f9ec5a61b4a8544d94ddc4367c226e8ebf61f3d79bed4695b1ddd38"
+        }
+      }
+    },
+    "payloads": [
+      {
+        "index": 0,
+        "sender": "initiator",
+        "plaintext_hex": "7061796c6f61642d302d6e6f6973652d696b2d32353531392d636861636861706f6c792d626c616b653262"
+      },
+      {
+        "index": 1,
+        "sender": "responder",
+        "plaintext_hex": "7061796c6f61642d312d6e6f6973652d696b2d32353531392d636861636861706f6c792d626c616b653262"
+      }
+    ]
+  },
+  "expected": {
+    "handshake_messages": [
+      {
+        "index": 0,
+        "sender": "initiator",
+        "message_hex": "00020020e129d8f91e70a972aa72ac994a5cfdc7dc231267d5bb2b9f75fe823567314d5b00304e93da730a8390853fd9b974b7076f2b2010dd36eaacad0f3d73c1e67b387945d34720c0318f63e06d174f52ff3a5d7c003b753b703e766e0e16533635012ad45a013778b407e61b86c7ea657dc638f4bd45a8ad20bd67240321b398f9651535dd552c5e2ba35d03a86759df90"
+      },
+      {
+        "index": 1,
+        "sender": "responder",
+        "message_hex": "0001002072b0bde80f9ec5a61b4a8544d94ddc4367c226e8ebf61f3d79bed4695b1ddd38003bf2a3d48a994eb123589c2e60b059d874225295e719f558b53c7065d94cd4b8cd045c01691bdd83e7a7a331cb00acf89e8e6b6f2dffeda4d8c7fa67"
+      }
+    ],
+    "handshake_hash": "c3a7f2ce7f07c73ad1c2a64f73330b723b87d5b0a7ca0f358c5b676acf28173450edd3c38f77786f25cc0b4a5cf166a926be812e405174de21d1d2f04316f160",
+    "split_transport_keys": {
+      "initiator": {
+        "tx": "728c72b6666d6aeb02b94617c9cdd809ccaf2dc9fbd4e84fb879069a58a59af3",
+        "rx": "4fc797b5f097de0d2331b86eb066f4b613abca6db95cd18d67cb75f752981266"
+      },
+      "responder": {
+        "tx": "4fc797b5f097de0d2331b86eb066f4b613abca6db95cd18d67cb75f752981266",
+        "rx": "728c72b6666d6aeb02b94617c9cdd809ccaf2dc9fbd4e84fb879069a58a59af3"
+      }
+    }
+  },
+  "negative_cases": [
+    {
+      "id": "flip-tag-final-message",
+      "description": "Flip one bit in the final authentication tag.",
+      "phase": "handshake",
+      "message_index": 1,
+      "mutation": {
+        "target": "tag",
+        "operation": "flip_last_bit"
+      },
+      "expected_error": {
+        "code": "decrypt_failed",
+        "detail": "Handshake must abort and clear transient state."
+      }
+    },
+    {
+      "id": "reorder-handshake-messages",
+      "description": "Deliver message index 1 before message index 0.",
+      "phase": "handshake",
+      "mutation": {
+        "target": "message_order",
+        "operation": "swap_0_1"
+      },
+      "expected_error": {
+        "code": "unexpected_message_order",
+        "detail": "Implementation must reject out-of-order handshake traffic."
+      }
+    }
+  ]
+}

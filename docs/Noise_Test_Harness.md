@@ -220,6 +220,13 @@ The test harness does NOT attempt to:
 - Fixtures must declare `schema_version` and follow the matching major folder: `test-vectors/fixtures/v1/`
 - If the contract changes incompatibly, add a new schema file (`...-v2.schema.json`) and write fixtures under `fixtures/v2/`
 - Each fixture must include protocol metadata, input key material/prologue/payloads, expected handshake outputs (messages/hash/split keys), and negative-case metadata
+- Current v1 corpus covers the full matrix (`80` fixtures):
+  - patterns: `NN`, `NK`, `KK`, `IK`, `XX`
+  - DH: `25519`, `448`
+  - ciphers: `ChaChaPoly`, `AESGCM`
+  - hashes: `SHA256`, `SHA512`, `BLAKE2s`, `BLAKE2b`
+- Fixture file naming for generated matrix vectors is:
+  `noise-<pattern-lower>-<dh>-<cipher-lower>-<hash-lower>.json`
 
 ---
 

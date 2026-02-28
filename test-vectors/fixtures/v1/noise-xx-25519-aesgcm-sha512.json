@@ -1,0 +1,116 @@
+{
+  "$schema": "../../schema/noise-vector-v1.schema.json",
+  "schema_version": "1.0.0",
+  "vector_id": "noise-xx-25519-aesgcm-sha512",
+  "description": "Deterministic fixture for Noise_XX_25519_AESGCM_SHA512.",
+  "protocol": {
+    "name": "Noise_XX_25519_AESGCM_SHA512",
+    "pattern": "XX",
+    "suite": {
+      "dh": "25519",
+      "cipher": "AESGCM",
+      "hash": "SHA512"
+    }
+  },
+  "inputs": {
+    "prologue": "70726f6c6f6775652d6e6f6973652d78782d32353531392d61657367636d2d736861353132",
+    "key_material": {
+      "initiator": {
+        "static": {
+          "private": "786e4b4b4ddd554ce20f8f448f74b790da5e1ff1b6fc482a1a142b6af7ffe96a",
+          "public": "3198f9c6e6821809cf53571e1b9eb53896ba025b8c96f2dca2b845d0b5943a37"
+        },
+        "ephemeral": {
+          "private": "78ab12adedef006d6779390b0b8c8fc13f0b046d8f5b6c5516047f7440599a6e",
+          "public": "2842ddaccd5232794bf8d599d14ee454d5be1ba95c86fd52e3f0d2383805174f"
+        }
+      },
+      "responder": {
+        "static": {
+          "private": "b065e7f8a8fad8127d1c93714ee9635b246263c82508048c09fb1619fb927d7d",
+          "public": "fd0189748cf2a2865805d261c547d3ed14290b8c7a9a33ac3d679a0c688d936c"
+        },
+        "ephemeral": {
+          "private": "80db3056ce7698d5cf1aa0c35a77aae6bbee706162c3bb025ad6ad16de11517f",
+          "public": "701cf48cd798a458ec49a831661a5ef3782a46b4533174902cf5f09cc870c94d"
+        }
+      }
+    },
+    "payloads": [
+      {
+        "index": 0,
+        "sender": "initiator",
+        "plaintext_hex": "7061796c6f61642d302d6e6f6973652d78782d32353531392d61657367636d2d736861353132"
+      },
+      {
+        "index": 1,
+        "sender": "responder",
+        "plaintext_hex": "7061796c6f61642d312d6e6f6973652d78782d32353531392d61657367636d2d736861353132"
+      },
+      {
+        "index": 2,
+        "sender": "initiator",
+        "plaintext_hex": "7061796c6f61642d322d6e6f6973652d78782d32353531392d61657367636d2d736861353132"
+      }
+    ]
+  },
+  "expected": {
+    "handshake_messages": [
+      {
+        "index": 0,
+        "sender": "initiator",
+        "message_hex": "000100202842ddaccd5232794bf8d599d14ee454d5be1ba95c86fd52e3f0d2383805174f00267061796c6f61642d302d6e6f6973652d78782d32353531392d61657367636d2d736861353132"
+      },
+      {
+        "index": 1,
+        "sender": "responder",
+        "message_hex": "00020020701cf48cd798a458ec49a831661a5ef3782a46b4533174902cf5f09cc870c94d0030e2cbd9f7941c8c51437811d94ffede9c4933c579bd438c53e1d6e0a87571cde7a169073003f133b3ac489e06bc2e7f0800362cb69b4acb7f6a12bb6160c7bd25d0da06056932eda9d8bf972eb95c1755253bfc36f0d5dc733f90305d6d81943f348492c60fb8774d"
+      },
+      {
+        "index": 2,
+        "sender": "initiator",
+        "message_hex": "000100300c582e921f166982a7571d5ad1ad983ae0184fd04bd76f368d09926d7786a35ac726b138fe4d5fef18a67e724852b3ca0036903480a016dc8e6f0bbdb0ed1fda2aee08dd8004da0e6f88d6564bdf2ba00102f8ceae17c87a8365e1c88f7b976da38c09e6fab0a23f"
+      }
+    ],
+    "handshake_hash": "4621f7ad10a22a36657b6c5a4a6d316b097eb4c6219c813bd0ddb194445078afcc88f02a426bf4e40bd4fdb5a003b885dbabed7c2e56002014336c301df04b60",
+    "split_transport_keys": {
+      "initiator": {
+        "tx": "2f6c9cbe60e5509d217a907afa04366aa4d61d18e2e82ff5c06443e9d6dd7b70",
+        "rx": "705503354abb59126a04332fcf986087217db846622e751206112427988d3787"
+      },
+      "responder": {
+        "tx": "705503354abb59126a04332fcf986087217db846622e751206112427988d3787",
+        "rx": "2f6c9cbe60e5509d217a907afa04366aa4d61d18e2e82ff5c06443e9d6dd7b70"
+      }
+    }
+  },
+  "negative_cases": [
+    {
+      "id": "flip-tag-final-message",
+      "description": "Flip one bit in the final authentication tag.",
+      "phase": "handshake",
+      "message_index": 2,
+      "mutation": {
+        "target": "tag",
+        "operation": "flip_last_bit"
+      },
+      "expected_error": {
+        "code": "decrypt_failed",
+        "detail": "Handshake must abort and clear transient state."
+      }
+    },
+    {
+      "id": "reorder-handshake-messages",
+      "description": "Deliver message index 1 before message index 0.",
+      "phase": "handshake",
+      "mutation": {
+        "target": "message_order",
+        "operation": "swap_0_1"
+      },
+      "expected_error": {
+        "code": "unexpected_message_order",
+        "detail": "Implementation must reject out-of-order handshake traffic."
+      }
+    }
+  ]
+}

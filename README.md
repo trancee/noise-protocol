@@ -2,6 +2,12 @@
 
 Cross-platform Noise Protocol implementation with native Kotlin and Swift APIs.
 
+[The Noise Protocol Framework](https://noiseprotocol.org/noise.html)
+```
+Revision: 34
+Date: 2018-07-11
+```
+
 Current scope:
 - Handshake patterns: `NN`, `NK`, `KK`, `IK`, `XX`
 - Core state machines: `CipherState`, `SymmetricState`, `HandshakeState`
@@ -19,6 +25,8 @@ Current scope:
   - `NoiseCryptoAdapters`
   - `NoiseTestHarness`
 - `test-vectors/`: shared schema and fixtures
+  - `fixtures/v1/` contains a full handshake/suite coverage matrix (80 vectors):
+    `NN|NK|KK|IK|XX` × `25519|448` × `ChaChaPoly|AESGCM` × `SHA256|SHA512|BLAKE2s|BLAKE2b`
 
 ## GitHub releases
 
