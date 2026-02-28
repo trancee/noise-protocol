@@ -1,7 +1,7 @@
 [versions]
-kotlin = "2.2.21"
-junitJupiter = "5.13.4"
-junitPlatform = "1.13.4"
+kotlin = "2.3.10"
+junitJupiter = "5.14.3"
+junitPlatform = "1.14.3"
 
 [libraries]
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junitJupiter" }
