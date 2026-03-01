@@ -1,101 +1,131 @@
-# Build Instructions (Release Operations)
+# Release Runbook
 
-This document reflects the currently implemented build and release flow.
+This runbook documents the release flow implemented in `.github/workflows/release.yml`.
 
-## Canonical version contract
+## 1) Prerequisites
 
-- `VERSION` is the single version source for Android, iOS, and release automation.
-- Android reads the canonical version from `../VERSION` in `android/build.gradle.kts`.
-- CI and release enforce parity with:
-  - `bash ./scripts/verify-version-parity.sh`
-  - `bash ./scripts/verify-version-parity.sh <tag>`
-- Release tags must be `v<VERSION>`.
-
-## Operator prerequisites and secrets
-
-### Tooling
+### Tooling (for local preflight)
 
 - Java 17
 - Gradle 8.10.2
-- Xcode 16.1 / Swift 6.0
+- Xcode 16.1
+- Swift 6.0
 
-### GitHub Actions permissions
+### Repository settings and operator permissions
 
-- `contents: write` (release creation)
-- `packages: write` (GitHub Packages publish job)
+- You need permission to push tags (`v*`) and to run workflows (`workflow_dispatch`).
+- Repository Actions settings must allow `GITHUB_TOKEN` write access, because the workflow creates GitHub releases and publishes packages.
+- The workflow requests:
+  - `contents: write` (release creation)
+  - `packages: write` (GitHub Packages publish job)
 
-### Required publish environment
+### Required secrets and publish inputs
 
-- `GITHUB_ACTOR`
-- `GITHUB_TOKEN`
-  - In GitHub Actions this is `${{ secrets.GITHUB_TOKEN }}`
-  - For local publishing use a token with package write access
-- `GITHUB_PACKAGES_URL` (optional override; defaults to `https://maven.pkg.github.com/<owner>/<repo>`)
-- `MAVEN_REPOSITORY_URL` (for additional Maven repository publish)
-- `MAVEN_REPOSITORY_USERNAME`
-- `MAVEN_REPOSITORY_PASSWORD`
+| Name | Required | Purpose |
+| --- | --- | --- |
+| `GITHUB_TOKEN` | Yes (workflow default secret) | Authenticates GitHub Release creation and publish to GitHub Packages. |
+| `GITHUB_ACTOR` | Yes (workflow context) | Username used with `GITHUB_TOKEN` for GitHub Packages credentials. |
+| `GITHUB_PACKAGES_URL` | Yes in workflow (set automatically) | GitHub Maven registry endpoint (defaults to `https://maven.pkg.github.com/<owner>/<repo>`). |
+| `MAVEN_REPOSITORY_URL` | Optional | External Maven repository release endpoint. If absent, external publish is skipped. |
+| `MAVEN_REPOSITORY_USERNAME` | Optional | External Maven repository username. If absent, external publish is skipped. |
+| `MAVEN_REPOSITORY_PASSWORD` | Optional | External Maven repository password/token. If absent, external publish is skipped. |
 
-### Optional signing inputs (Gradle properties)
+Optional Gradle signing properties (currently not required to publish): `signingKeyId`, `signingKey`, `signingPassword`.
 
-- `signingKeyId`
-- `signingKey`
-- `signingPassword`
+## 2) Canonical version contract
 
-If signing values are absent, publication still proceeds (current phase-1 behavior).
+- `VERSION` is the single source of truth for Android, iOS, and release automation.
+- Android reads version from `../VERSION` (`android/build.gradle.kts`).
+- Release tags must be `v<VERSION>`.
+- Parity checks:
+  - `bash ./scripts/verify-version-parity.sh`
+  - `bash ./scripts/verify-version-parity.sh <tag>`
 
-## Implemented CI flow (`.github/workflows/ci.yml`)
+## 3) Preflight checks
 
-1. Version parity gate (`scripts/verify-version-parity.sh`)
-2. Android tests (`:noise-core:test :noise-crypto:test :noise-testing:test`)
-3. iOS tests (`swift test` in `ios/`)
-4. Cross-platform interop (`scripts/verify-cross-platform-interop.sh`)
-
-## Implemented release flow (`.github/workflows/release.yml`)
-
-1. Resolve `RELEASE_TAG` from tag push or manual dispatch input.
-2. Run version parity checks against `VERSION` and `RELEASE_TAG`.
-3. Build/test Android and package release JAR bundle:
-   - `noise-core`, `noise-crypto`, `noise-testing`
-   - output: `noise-android-<tag>.tar.gz`
-4. Build/test Swift package and package iOS source bundle:
-   - output: `noise-ios-swiftpm-<tag>.tar.gz`
-5. Publish `noise.protocol:noise-android-aar:<VERSION>` to GitHub Packages:
-   - `:noise-android-aar:publishReleasePublicationToGitHubPackagesRepository`
-6. Publish `noise.protocol:noise-android-aar:<VERSION>` to external Maven repository:
-   - `:noise-android-aar:publishReleasePublicationToExternalMavenRepository`
-7. Generate `SHA256SUMS.txt` and create GitHub Release.
-
-## Local operator commands
+Run these checks before creating the release trigger:
 
 ```bash
-# Verify version contract
+# Version parity
 bash ./scripts/verify-version-parity.sh
 
-# Android validation and local publish smoke check
+# Android tests
 cd android
 gradle --no-daemon --console=plain :noise-core:test :noise-crypto:test :noise-testing:test
-gradle --no-daemon --console=plain :noise-android-aar:assembleRelease :noise-android-aar:publishReleasePublicationToMavenLocal
-
-# Optional: publish to GitHub Packages (phase 1 target)
-GITHUB_ACTOR=<user> \
-GITHUB_TOKEN=<token> \
-GITHUB_PACKAGES_URL=https://maven.pkg.github.com/<owner>/<repo> \
-gradle --no-daemon --console=plain :noise-android-aar:publishReleasePublicationToGitHubPackagesRepository
-
-# Optional: publish to external Maven repository
-MAVEN_REPOSITORY_URL=https://maven.example.com/releases \
-MAVEN_REPOSITORY_USERNAME=<user> \
-MAVEN_REPOSITORY_PASSWORD=<password> \
-gradle --no-daemon --console=plain :noise-android-aar:publishReleasePublicationToExternalMavenRepository
 cd ..
 
-# iOS and interop verification
+# iOS tests
+cd ios
 swift test
+cd ..
+
+# Cross-platform deterministic interop
 bash ./scripts/verify-cross-platform-interop.sh
 ```
 
-## Distribution notes
+If you want external Maven upload, verify these repository secrets are present:
+- `MAVEN_REPOSITORY_URL`
+- `MAVEN_REPOSITORY_USERNAME`
+- `MAVEN_REPOSITORY_PASSWORD`
 
-- Android publication targets: GitHub Packages and configured external Maven repository (`noise-android-aar`).
-- GitHub Releases continue to publish tarballs plus checksums.
-- Maven Central publication remains a future phase.
+## 4) Version bump and changelog update
+
+1. Update `VERSION` to the target release version (`MAJOR.MINOR.PATCH`).
+2. Update `CHANGELOG.md` so release notes are ready before tagging.
+3. Commit the release-prep changes on the branch/commit you will release.
+4. Re-run `bash ./scripts/verify-version-parity.sh` after editing.
+
+## 5) Trigger the release workflow
+
+Use one of the two supported methods.
+
+### Method A: tag push (default)
+
+```bash
+git tag v<VERSION>
+git push origin v<VERSION>
+```
+
+This triggers `release.yml` via `on.push.tags: v*`.
+
+### Method B: manual `workflow_dispatch`
+
+1. Open **Actions → Release → Run workflow**.
+2. Select the branch/commit to release.
+3. Enter `tag` as `v<VERSION>`.
+4. Run workflow.
+
+For manual runs, the workflow uses the selected ref commit (`github.sha`) as `target_commitish`.
+
+## 6) What the workflow publishes
+
+If all jobs pass, the workflow publishes:
+
+1. **GitHub Packages (Maven)**  
+   Artifact: `noise.protocol:noise-android-aar:<VERSION>`  
+   Task: `:noise-android-aar:publishReleasePublicationToGitHubPackagesRepository`
+2. **External Maven repository (conditional)**  
+   Artifact: `noise.protocol:noise-android-aar:<VERSION>`  
+   Task: `:noise-android-aar:publishReleasePublicationToExternalMavenRepository`  
+   The job skips this upload when any `MAVEN_REPOSITORY_*` secret is missing.
+3. **GitHub Release assets**
+   - `noise-android-<tag>.tar.gz` (Android `noise-core`, `noise-crypto`, `noise-testing` JARs)
+   - `noise-ios-swiftpm-<tag>.tar.gz` (Swift package manifest + sources + `VERSION`)
+   - `SHA256SUMS.txt` (generated from the two `.tar.gz` assets)
+
+## 7) Post-release verification checklist
+
+- Workflow run is green for all jobs in `.github/workflows/release.yml`.
+- GitHub Release exists for `v<VERSION>` with all three assets above.
+- `SHA256SUMS.txt` validates downloaded release archives.
+- GitHub Packages contains `noise.protocol:noise-android-aar:<VERSION>`.
+- If `MAVEN_REPOSITORY_*` secrets are configured, external Maven repository contains `noise.protocol:noise-android-aar:<VERSION>`.
+- Consumers can resolve the new Android artifact version from both Maven endpoints.
+
+## 8) Failure handling and rollback
+
+- If the workflow fails before publish jobs run, fix the issue and re-run.
+- If one publish target succeeds and another fails, treat `<VERSION>` as potentially consumed; prefer a new patch version and a new tag instead of reusing the same version.
+- If GitHub Release creation fails after package publication, re-run only after confirming asset/version consistency.
+- If the wrong tag was used and nothing was published, delete the tag and re-run with the correct tag.
+- Do not force-overwrite a released version in Maven repositories; publish a new version instead.

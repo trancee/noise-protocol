@@ -22,4 +22,4 @@ All notable changes to this project are documented in this file.
 
 - Release workflow now enforces version parity before build/publish jobs.
 - Release process keeps publishing GitHub release bundles and `SHA256SUMS.txt` alongside package publication.
-- Release workflow now also publishes `noise-android-aar` to a configured external Maven repository on every release.
+- Release workflow now skips external Maven upload when `MAVEN_REPOSITORY_*` secrets are missing, while continuing GitHub Packages and GitHub Release publication.

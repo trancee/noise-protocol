@@ -34,6 +34,7 @@ Current scope:
 ## GitHub releases
 
 - Workflow: `.github/workflows/release.yml`
+- Full operator runbook: `RELEASE.md`
 - Canonical version contract:
   - `VERSION` is the single source of truth for Android, iOS, and release automation.
   - Release tags must match `v<VERSION>` and are validated by:
@@ -47,7 +48,8 @@ Current scope:
     - Task: `:noise-android-aar:publishReleasePublicationToGitHubPackagesRepository`
   - External Maven repository artifact: `noise.protocol:noise-android-aar:<VERSION>`
     - Task: `:noise-android-aar:publishReleasePublicationToExternalMavenRepository`
-    - Required secrets: `MAVEN_REPOSITORY_URL`, `MAVEN_REPOSITORY_USERNAME`, `MAVEN_REPOSITORY_PASSWORD`
+    - Secrets: `MAVEN_REPOSITORY_URL`, `MAVEN_REPOSITORY_USERNAME`, `MAVEN_REPOSITORY_PASSWORD`
+    - If any secret is missing, the workflow skips external Maven upload.
 - Published GitHub release assets:
   - `noise-android-<tag>.tar.gz` (Android `noise-core`, `noise-crypto`, `noise-testing` JARs)
   - `noise-ios-swiftpm-<tag>.tar.gz` (Swift Package manifest + Sources + `VERSION`)
