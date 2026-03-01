@@ -10,6 +10,21 @@ func bootstrapDefaultProtocolProfile() {
     #expect(NoiseProtocolDescriptor.bootstrapDefault.rawValue == "Noise_XX_25519_AESGCM_SHA256")
 }
 
+@Test("Core exposes library version from canonical source")
+func bootstrapLibraryVersion() throws {
+    let sourceFile = URL(fileURLWithPath: #filePath)
+    let testsDirectory = sourceFile.deletingLastPathComponent()
+    let iosDirectory = testsDirectory.deletingLastPathComponent().deletingLastPathComponent()
+    let repositoryDirectory = iosDirectory.deletingLastPathComponent()
+    let canonicalVersionFile = repositoryDirectory.appendingPathComponent("VERSION")
+
+    let canonicalVersion = try String(contentsOf: canonicalVersionFile, encoding: .utf8)
+        .trimmingCharacters(in: .whitespacesAndNewlines)
+
+    #expect(!canonicalVersion.isEmpty)
+    #expect(NoiseCoreVersion.libraryVersion == canonicalVersion)
+}
+
 @Test("Pattern table ordering is correct for NN/NK/KK/IK/XX")
 func handshakePatternTableOrdering() {
     let expected: [(NoiseHandshakePatternName, [NoisePatternMessage], [NoisePatternMessage])] = [

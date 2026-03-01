@@ -1,8 +1,14 @@
-plugins {
-    alias(libs.plugins.kotlin.jvm) apply false
+val canonicalVersion = run {
+    val versionFile = rootDir.resolve("../VERSION")
+    check(versionFile.isFile) {
+        "Missing canonical VERSION file at ${versionFile.absolutePath}"
+    }
+    versionFile.readText().trim().also {
+        check(it.isNotEmpty()) { "Canonical VERSION file is empty." }
+    }
 }
 
 allprojects {
     group = "noise.protocol"
-    version = "0.1.0-SNAPSHOT"
+    version = canonicalVersion
 }

@@ -18,4 +18,6 @@ ios/.build/
 xcuserdata/
 *.xcuserstate
 
+.build/
+
 .vscode/

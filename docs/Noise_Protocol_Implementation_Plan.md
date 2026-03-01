@@ -63,6 +63,7 @@
 - Android module tests: `cd android && gradle --no-daemon --console=plain :noise-core:test :noise-crypto:test :noise-testing:test`
 - iOS Swift package tests: `cd ios && swift test`
 - Cross-platform deterministic interop check: `./scripts/verify-cross-platform-interop.sh`
+- Artifact smoke validation (version parity + Android AAR publish shape + root/legacy Swift package checks): `./scripts/verify-artifact-smoke.sh`
 
 ### CI validation matrix (current scaffold)
 

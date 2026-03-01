@@ -16,12 +16,14 @@ Current scope:
 
 ## Repository layout
 
-- `android/`: Kotlin/JVM modules
+- `android/`: Kotlin/JVM + Android library modules
   - `:noise-core`
   - `:noise-crypto`
   - `:noise-testing`
+  - `:noise-android-aar` (publishable AAR wrapper)
   - source/test package directories follow `noise/protocol/...`
-- `ios/`: Swift Package
+- `Package.swift`: canonical Swift Package entrypoint for repository/tag-based consumption
+- `ios/`: Swift sources/tests (with compatibility `ios/Package.swift` manifest)
   - `NoiseCore`
   - `NoiseCryptoAdapters`
   - `NoiseTestHarness`
@@ -32,35 +34,53 @@ Current scope:
 ## GitHub releases
 
 - Workflow: `.github/workflows/release.yml`
+- Canonical version contract:
+  - `VERSION` is the single source of truth for Android, iOS, and release automation.
+  - Release tags must match `v<VERSION>` and are validated by:
+    - `bash ./scripts/verify-version-parity.sh` (CI)
+    - `bash ./scripts/verify-version-parity.sh <tag>` (release)
 - Trigger:
   - push a tag matching `v*` (for example `v0.1.0`)
   - manual dispatch with a `tag` input
-- Published release assets:
+- Publish targets:
+  - GitHub Packages Maven artifact: `noise.protocol:noise-android-aar:<VERSION>`
+    - Task: `:noise-android-aar:publishReleasePublicationToGitHubPackagesRepository`
+  - External Maven repository artifact: `noise.protocol:noise-android-aar:<VERSION>`
+    - Task: `:noise-android-aar:publishReleasePublicationToExternalMavenRepository`
+    - Required secrets: `MAVEN_REPOSITORY_URL`, `MAVEN_REPOSITORY_USERNAME`, `MAVEN_REPOSITORY_PASSWORD`
+- Published GitHub release assets:
   - `noise-android-<tag>.tar.gz` (Android `noise-core`, `noise-crypto`, `noise-testing` JARs)
-  - `noise-ios-swiftpm-<tag>.tar.gz` (Swift Package manifest + Sources)
+  - `noise-ios-swiftpm-<tag>.tar.gz` (Swift Package manifest + Sources + `VERSION`)
   - `SHA256SUMS.txt`
 
 ## Android usage (Kotlin)
 
-### 1) Add modules
+### 1) Add dependency
 
-Use this repository as a source dependency and depend on:
-- `:noise-core`
-- `:noise-crypto`
+Published Android artifact (`noise-android-aar`) is uploaded by release workflow to GitHub Packages and the configured external Maven repository.
 
-Example (`settings.gradle.kts` in your app project):
+Example (`build.gradle.kts` in your app project):
+
+```kotlin
+repositories {
+    maven {
+        url = uri("https://maven.pkg.github.com/<owner>/<repo>")
+        credentials {
+            username = (findProperty("gpr.user") as String?) ?: System.getenv("GITHUB_ACTOR")
+            password = (findProperty("gpr.key") as String?) ?: System.getenv("GITHUB_TOKEN")
+        }
+    }
+}
+
+dependencies {
+    implementation("noise.protocol:noise-android-aar:<VERSION>")
+}
+```
+
+For local source development, include this repository build:
 
 ```kotlin
 includeBuild("../noise-protocol/android")
-```
-
-Example (`build.gradle.kts` in your module):
-
-```kotlin
-dependencies {
-    implementation("noise.protocol:noise-core:0.1.0-SNAPSHOT")
-    implementation("noise.protocol:noise-crypto:0.1.0-SNAPSHOT")
-}
 ```
 
 ### 2) Build the default Noise configuration
@@ -147,7 +167,7 @@ Add this repository as a Swift Package dependency and link:
 - `NoiseCryptoAdapters`
 
 Example (`Package.swift`):
-- Add `.package(path: "../noise-protocol/ios")` (or the repository URL) to dependencies.
+- Add `.package(path: "../noise-protocol")` for local development, or the repository URL for tag-based usage.
 - In your target dependencies, link the package products:
   - `NoiseCore`
   - `NoiseCryptoAdapters`
@@ -225,12 +245,16 @@ Use `customSuite.protocolName` and `customProvider` when initializing both hands
 ## Verify locally
 
 ```bash
+# Version contract parity
+bash ./scripts/verify-version-parity.sh
+
 # Android
 cd android
 gradle --no-daemon --console=plain :noise-core:test :noise-crypto:test :noise-testing:test
+gradle --no-daemon --console=plain :noise-android-aar:assembleRelease :noise-android-aar:publishReleasePublicationToMavenLocal
+cd ..
 
-# iOS
-cd ios
+# iOS (repository-root Swift Package entrypoint)
 swift test
 
 # Cross-platform interop

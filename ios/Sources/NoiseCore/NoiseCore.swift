@@ -2,6 +2,34 @@ import Foundation
 
 public enum NoiseCoreVersion: Sendable {
     public static let specificationRevision = 34
+    public static let libraryVersion = NoiseLibraryVersionSource.current
+}
+
+private enum NoiseLibraryVersionSource {
+    static let current: String = {
+        for candidate in candidateVersionFiles {
+            guard let raw = try? String(contentsOf: candidate, encoding: .utf8) else {
+                continue
+            }
+            let value = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !value.isEmpty {
+                return value
+            }
+        }
+        return "unknown"
+    }()
+
+    private static let candidateVersionFiles: [URL] = {
+        let sourceFile = URL(fileURLWithPath: #filePath)
+        let noiseCoreDirectory = sourceFile.deletingLastPathComponent()
+        let sourcesDirectory = noiseCoreDirectory.deletingLastPathComponent()
+        let iosDirectory = sourcesDirectory.deletingLastPathComponent()
+        let repositoryDirectory = iosDirectory.deletingLastPathComponent()
+        return [
+            iosDirectory.appendingPathComponent("VERSION"),
+            repositoryDirectory.appendingPathComponent("VERSION"),
+        ]
+    }()
 }
 
 public struct NoiseProtocolDescriptor: Sendable, Hashable {
