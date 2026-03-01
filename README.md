@@ -52,6 +52,7 @@ Current scope:
     - If any secret is missing, the workflow skips external Maven upload.
 - Published GitHub release assets:
   - `noise-android-<tag>.tar.gz` (Android `noise-core`, `noise-crypto`, `noise-testing` JARs)
+  - `noise-android-aar-<tag>.aar` (Android AAR artifact for direct consumption)
   - `noise-ios-swiftpm-<tag>.tar.gz` (Swift Package manifest + Sources + `VERSION`)
   - `SHA256SUMS.txt`
 

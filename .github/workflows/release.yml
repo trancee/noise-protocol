@@ -61,21 +61,25 @@ jobs:
       - name: Run Android module tests
         working-directory: android
         run: gradle --no-daemon --console=plain :noise-core:test :noise-crypto:test :noise-testing:test
-      - name: Build Android jars
+      - name: Build Android jars and AAR
         working-directory: android
-        run: gradle --no-daemon --console=plain :noise-core:jar :noise-crypto:jar :noise-testing:jar
+        run: gradle --no-daemon --console=plain :noise-core:jar :noise-crypto:jar :noise-testing:jar :noise-android-aar:assembleRelease
       - name: Package Android artifacts
         run: |
           mkdir -p release/android
           cp android/noise-core/build/libs/noise-core-*.jar release/android/
           cp android/noise-crypto/build/libs/noise-crypto-*.jar release/android/
           cp android/noise-testing/build/libs/noise-testing-*.jar release/android/
+          cp android/noise-android-aar/build/outputs/aar/noise-android-aar-release.aar release/android/
+          cp android/noise-android-aar/build/outputs/aar/noise-android-aar-release.aar "noise-android-aar-${RELEASE_TAG}.aar"
           tar -C release -czf "noise-android-${RELEASE_TAG}.tar.gz" android
       - name: Upload Android release bundle
         uses: actions/upload-artifact@v4
         with:
           name: android-release-asset
-          path: noise-android-${{ env.RELEASE_TAG }}.tar.gz
+          path: |
+            noise-android-${{ env.RELEASE_TAG }}.tar.gz
+            noise-android-aar-${{ env.RELEASE_TAG }}.aar
           if-no-files-found: error
 
   build-ios:
@@ -208,7 +212,7 @@ jobs:
           path: release-assets
       - name: Generate checksums
         working-directory: release-assets
-        run: sha256sum -- *.tar.gz > SHA256SUMS.txt
+        run: sha256sum -- *.tar.gz *.aar > SHA256SUMS.txt
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
         with:
@@ -218,5 +222,6 @@ jobs:
           generate_release_notes: true
           files: |
             release-assets/noise-android-${{ env.RELEASE_TAG }}.tar.gz
+            release-assets/noise-android-aar-${{ env.RELEASE_TAG }}.aar
             release-assets/noise-ios-swiftpm-${{ env.RELEASE_TAG }}.tar.gz
             release-assets/SHA256SUMS.txt

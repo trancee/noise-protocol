@@ -109,14 +109,15 @@ If all jobs pass, the workflow publishes:
    Task: `:noise-android-aar:publishReleasePublicationToExternalMavenRepository`  
    The job skips this upload when any `MAVEN_REPOSITORY_*` secret is missing.
 3. **GitHub Release assets**
-   - `noise-android-<tag>.tar.gz` (Android `noise-core`, `noise-crypto`, `noise-testing` JARs)
+   - `noise-android-<tag>.tar.gz` (Android `noise-core`, `noise-crypto`, `noise-testing` JARs, plus AAR in archive)
+   - `noise-android-aar-<tag>.aar` (direct Android AAR asset)
    - `noise-ios-swiftpm-<tag>.tar.gz` (Swift package manifest + sources + `VERSION`)
-   - `SHA256SUMS.txt` (generated from the two `.tar.gz` assets)
+   - `SHA256SUMS.txt` (generated from release `.tar.gz` and `.aar` assets)
 
 ## 7) Post-release verification checklist
 
 - Workflow run is green for all jobs in `.github/workflows/release.yml`.
-- GitHub Release exists for `v<VERSION>` with all three assets above.
+- GitHub Release exists for `v<VERSION>` with all assets above.
 - `SHA256SUMS.txt` validates downloaded release archives.
 - GitHub Packages contains `noise.protocol:noise-android-aar:<VERSION>`.
 - If `MAVEN_REPOSITORY_*` secrets are configured, external Maven repository contains `noise.protocol:noise-android-aar:<VERSION>`.
