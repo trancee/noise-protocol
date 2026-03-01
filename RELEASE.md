@@ -101,8 +101,11 @@ For manual runs, the workflow uses the selected ref commit (`github.sha`) as `ta
 If all jobs pass, the workflow publishes:
 
 1. **Maven Central**  
-   Artifact: `ch.trancee:noise-android-aar:<VERSION>`  
-   Task: `:noise-android-aar:publishAndReleaseToMavenCentral`
+   Artifacts:
+   - `ch.trancee:noise-core:<VERSION>`
+   - `ch.trancee:noise-crypto:<VERSION>`
+   - `ch.trancee:noise-android-aar:<VERSION>`  
+   Task: `:noise-core:publishToMavenCentral :noise-crypto:publishToMavenCentral :noise-android-aar:publishAndReleaseToMavenCentral`
 2. **GitHub Release assets**
    - `noise-android-<tag>.tar.gz` (Android `noise-core`, `noise-crypto`, `noise-testing` JARs, plus AAR in archive)
    - `noise-android-aar-<tag>.aar` (direct Android AAR asset)
@@ -114,6 +117,8 @@ If all jobs pass, the workflow publishes:
 - Workflow run is green for all jobs in `.github/workflows/release.yml`.
 - GitHub Release exists for `v<VERSION>` with all assets above.
 - `SHA256SUMS.txt` validates downloaded release archives.
+- Maven Central contains `ch.trancee:noise-core:<VERSION>`.
+- Maven Central contains `ch.trancee:noise-crypto:<VERSION>`.
 - Maven Central contains `ch.trancee:noise-android-aar:<VERSION>`.
 - Consumers can resolve the new Android artifact version from Maven Central.
 

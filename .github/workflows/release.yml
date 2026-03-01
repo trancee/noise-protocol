@@ -156,14 +156,14 @@ jobs:
           if [[ "$missing" -ne 0 ]]; then
             exit 1
           fi
-      - name: Publish AAR to Maven Central
+      - name: Publish Android artifacts to Maven Central
         working-directory: android
         env:
           ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
           ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
           ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.MAVEN_SIGNING_KEY }}
           ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.MAVEN_SIGNING_PASSWORD }}
-        run: gradle --no-daemon --console=plain :noise-android-aar:publishAndReleaseToMavenCentral
+        run: gradle --no-daemon --console=plain :noise-core:publishToMavenCentral :noise-crypto:publishToMavenCentral :noise-android-aar:publishAndReleaseToMavenCentral
 
   publish-release:
     name: Publish GitHub release

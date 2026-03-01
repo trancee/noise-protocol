@@ -44,8 +44,11 @@ Current scope:
   - push a tag matching `v*` (for example `v0.1.0`)
   - manual dispatch with a `tag` input
 - Publish targets:
-  - Maven Central artifact: `ch.trancee:noise-android-aar:<VERSION>`
-    - Task: `:noise-android-aar:publishAndReleaseToMavenCentral`
+  - Maven Central artifacts:
+    - `ch.trancee:noise-core:<VERSION>`
+    - `ch.trancee:noise-crypto:<VERSION>`
+    - `ch.trancee:noise-android-aar:<VERSION>`
+    - Task: `:noise-core:publishToMavenCentral :noise-crypto:publishToMavenCentral :noise-android-aar:publishAndReleaseToMavenCentral`
     - Required secrets: `MAVEN_CENTRAL_USERNAME`, `MAVEN_CENTRAL_PASSWORD`, `MAVEN_SIGNING_KEY`, `MAVEN_SIGNING_PASSWORD`
 - Published GitHub release assets:
   - `noise-android-<tag>.tar.gz` (Android `noise-core`, `noise-crypto`, `noise-testing` JARs)
@@ -55,9 +58,11 @@ Current scope:
 
 ## Android usage (Kotlin)
 
+Minimum supported Android API level: 23.
+
 ### 1) Add dependency
 
-Published Android artifact (`noise-android-aar`) is uploaded by release workflow to Maven Central.
+Published Android artifacts are uploaded by release workflow to Maven Central. `noise-android-aar` exposes `noise-core` and `noise-crypto` via transitive dependencies.
 
 Example (`build.gradle.kts` in your app project):
 

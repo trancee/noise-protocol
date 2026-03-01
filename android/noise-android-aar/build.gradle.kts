@@ -6,12 +6,34 @@ plugins {
 android {
     namespace = "noise.protocol.android.aar"
     compileSdk = 35
-    defaultConfig { minSdk = 26 }
+    defaultConfig { minSdk = 23 }
+}
+
+dependencies {
+    api(project(":noise-core"))
+    api(project(":noise-crypto"))
 }
 
 mavenPublishing {
     publishToMavenCentral(automaticRelease = true) // auto publish after validation
-    signAllPublications()
+    val signingInMemoryKey = providers.gradleProperty("signingInMemoryKey").orNull
+    val signingInMemoryKeyPassword = providers.gradleProperty("signingInMemoryKeyPassword").orNull
+    val signingKeyId = providers.gradleProperty("signing.keyId").orNull
+    val signingPassword = providers.gradleProperty("signing.password").orNull
+    val signingSecretKeyRingFile = providers.gradleProperty("signing.secretKeyRingFile").orNull
+    val hasSigningConfiguration =
+        (
+            !signingInMemoryKey.isNullOrBlank() &&
+                !signingInMemoryKeyPassword.isNullOrBlank()
+            ) ||
+            (
+                !signingKeyId.isNullOrBlank() &&
+                    !signingPassword.isNullOrBlank() &&
+                    !signingSecretKeyRingFile.isNullOrBlank()
+                )
+    if (hasSigningConfiguration) {
+        signAllPublications()
+    }
 
     coordinates("ch.trancee", "noise-android-aar", version.toString())
 
