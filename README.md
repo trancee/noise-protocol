@@ -44,12 +44,9 @@ Current scope:
   - push a tag matching `v*` (for example `v0.1.0`)
   - manual dispatch with a `tag` input
 - Publish targets:
-  - GitHub Packages Maven artifact: `noise.protocol:noise-android-aar:<VERSION>`
-    - Task: `:noise-android-aar:publishReleasePublicationToGitHubPackagesRepository`
-  - External Maven repository artifact: `noise.protocol:noise-android-aar:<VERSION>`
-    - Task: `:noise-android-aar:publishReleasePublicationToExternalMavenRepository`
-    - Secrets: `MAVEN_REPOSITORY_URL`, `MAVEN_REPOSITORY_USERNAME`, `MAVEN_REPOSITORY_PASSWORD`
-    - If any secret is missing, the workflow skips external Maven upload.
+  - Maven Central artifact: `ch.trancee:noise-android-aar:<VERSION>`
+    - Task: `:noise-android-aar:publishAndReleaseToMavenCentral`
+    - Required secrets: `MAVEN_CENTRAL_USERNAME`, `MAVEN_CENTRAL_PASSWORD`, `MAVEN_SIGNING_KEY`, `MAVEN_SIGNING_PASSWORD`
 - Published GitHub release assets:
   - `noise-android-<tag>.tar.gz` (Android `noise-core`, `noise-crypto`, `noise-testing` JARs)
   - `noise-android-aar-<tag>.aar` (Android AAR artifact for direct consumption)
@@ -60,23 +57,17 @@ Current scope:
 
 ### 1) Add dependency
 
-Published Android artifact (`noise-android-aar`) is uploaded by release workflow to GitHub Packages and the configured external Maven repository.
+Published Android artifact (`noise-android-aar`) is uploaded by release workflow to Maven Central.
 
 Example (`build.gradle.kts` in your app project):
 
 ```kotlin
 repositories {
-    maven {
-        url = uri("https://maven.pkg.github.com/<owner>/<repo>")
-        credentials {
-            username = (findProperty("gpr.user") as String?) ?: System.getenv("GITHUB_ACTOR")
-            password = (findProperty("gpr.key") as String?) ?: System.getenv("GITHUB_TOKEN")
-        }
-    }
+    mavenCentral()
 }
 
 dependencies {
-    implementation("noise.protocol:noise-android-aar:<VERSION>")
+    implementation("ch.trancee:noise-android-aar:<VERSION>")
 }
 ```
 

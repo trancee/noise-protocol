@@ -11,7 +11,7 @@ permissions:
 
 env:
   JAVA_VERSION: "17"
-  GRADLE_VERSION: "8.10.2"
+  GRADLE_VERSION: "9.3.1"
   XCODE_VERSION: "16.1"
 
 jobs:

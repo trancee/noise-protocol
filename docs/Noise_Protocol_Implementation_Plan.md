@@ -68,9 +68,9 @@
 ### CI validation matrix (current scaffold)
 
 - Workflow: `.github/workflows/ci.yml`
-- Android job (`ubuntu-24.04`, Java 17, Gradle 8.10.2): `cd android && gradle --no-daemon --console=plain :noise-core:test :noise-crypto:test :noise-testing:test`
+- Android job (`ubuntu-24.04`, Java 17, Gradle 9.3.1): `cd android && gradle --no-daemon --console=plain :noise-core:test :noise-crypto:test :noise-testing:test`
 - iOS job (`macos-15`, Xcode 16.1): `cd ios && swift test`
-- Cross-platform interop job (`macos-15`, Xcode 16.1, Java 17, Gradle 8.10.2): `./scripts/verify-cross-platform-interop.sh`
+- Cross-platform interop job (`macos-15`, Xcode 16.1, Java 17, Gradle 9.3.1): `./scripts/verify-cross-platform-interop.sh`
 
 ### Dependency update policy (Dependabot)
 

@@ -9,6 +9,6 @@ val canonicalVersion = run {
 }
 
 allprojects {
-    group = "noise.protocol"
+    group = "ch.trancee"
     version = canonicalVersion
 }
