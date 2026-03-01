@@ -14,23 +14,21 @@ This runbook documents the release flow implemented in `.github/workflows/releas
 ### Repository settings and operator permissions
 
 - You need permission to push tags (`v*`) and to run workflows (`workflow_dispatch`).
-- Repository Actions settings must allow `GITHUB_TOKEN` write access, because the workflow creates GitHub releases and publishes packages.
+- Repository Actions settings must allow `GITHUB_TOKEN` write access, because the workflow creates GitHub releases.
 - The workflow requests:
   - `contents: write` (release creation)
-  - `packages: write` (GitHub Packages publish job)
 
 ### Required secrets and publish inputs
 
 | Name | Required | Purpose |
 | --- | --- | --- |
-| `GITHUB_TOKEN` | Yes (workflow default secret) | Authenticates GitHub Release creation and publish to GitHub Packages. |
-| `GITHUB_ACTOR` | Yes (workflow context) | Username used with `GITHUB_TOKEN` for GitHub Packages credentials. |
-| `GITHUB_PACKAGES_URL` | Yes in workflow (set automatically) | GitHub Maven registry endpoint (defaults to `https://maven.pkg.github.com/<owner>/<repo>`). |
-| `MAVEN_REPOSITORY_URL` | Optional | External Maven repository release endpoint. If absent, external publish is skipped. |
-| `MAVEN_REPOSITORY_USERNAME` | Optional | External Maven repository username. If absent, external publish is skipped. |
-| `MAVEN_REPOSITORY_PASSWORD` | Optional | External Maven repository password/token. If absent, external publish is skipped. |
+| `GITHUB_TOKEN` | Yes (workflow default secret) | Authenticates GitHub Release creation. |
+| `MAVEN_CENTRAL_USERNAME` | Yes | Sonatype Central Portal token username used by Gradle publishing. |
+| `MAVEN_CENTRAL_PASSWORD` | Yes | Sonatype Central Portal token password used by Gradle publishing. |
+| `MAVEN_SIGNING_KEY` | Yes | ASCII-armored private PGP key used to sign Maven publications. |
+| `MAVEN_SIGNING_PASSWORD` | Yes | Passphrase for `MAVEN_SIGNING_KEY`. |
 
-Optional Gradle signing properties (currently not required to publish): `signingKeyId`, `signingKey`, `signingPassword`.
+Optional Gradle signing property: `signingInMemoryKeyId`.
 
 ## 2) Canonical version contract
 
@@ -63,10 +61,11 @@ cd ..
 bash ./scripts/verify-cross-platform-interop.sh
 ```
 
-If you want external Maven upload, verify these repository secrets are present:
-- `MAVEN_REPOSITORY_URL`
-- `MAVEN_REPOSITORY_USERNAME`
-- `MAVEN_REPOSITORY_PASSWORD`
+Verify these repository secrets are present:
+- `MAVEN_CENTRAL_USERNAME`
+- `MAVEN_CENTRAL_PASSWORD`
+- `MAVEN_SIGNING_KEY`
+- `MAVEN_SIGNING_PASSWORD`
 
 ## 4) Version bump and changelog update
 
@@ -101,14 +100,10 @@ For manual runs, the workflow uses the selected ref commit (`github.sha`) as `ta
 
 If all jobs pass, the workflow publishes:
 
-1. **GitHub Packages (Maven)**  
-   Artifact: `noise.protocol:noise-android-aar:<VERSION>`  
-   Task: `:noise-android-aar:publishReleasePublicationToGitHubPackagesRepository`
-2. **External Maven repository (conditional)**  
-   Artifact: `noise.protocol:noise-android-aar:<VERSION>`  
-   Task: `:noise-android-aar:publishReleasePublicationToExternalMavenRepository`  
-   The job skips this upload when any `MAVEN_REPOSITORY_*` secret is missing.
-3. **GitHub Release assets**
+1. **Maven Central**  
+   Artifact: `ch.trancee:noise-android-aar:<VERSION>`  
+   Task: `:noise-android-aar:publishAndReleaseToMavenCentral`
+2. **GitHub Release assets**
    - `noise-android-<tag>.tar.gz` (Android `noise-core`, `noise-crypto`, `noise-testing` JARs, plus AAR in archive)
    - `noise-android-aar-<tag>.aar` (direct Android AAR asset)
    - `noise-ios-swiftpm-<tag>.tar.gz` (Swift package manifest + sources + `VERSION`)
@@ -119,14 +114,13 @@ If all jobs pass, the workflow publishes:
 - Workflow run is green for all jobs in `.github/workflows/release.yml`.
 - GitHub Release exists for `v<VERSION>` with all assets above.
 - `SHA256SUMS.txt` validates downloaded release archives.
-- GitHub Packages contains `noise.protocol:noise-android-aar:<VERSION>`.
-- If `MAVEN_REPOSITORY_*` secrets are configured, external Maven repository contains `noise.protocol:noise-android-aar:<VERSION>`.
-- Consumers can resolve the new Android artifact version from both Maven endpoints.
+- Maven Central contains `ch.trancee:noise-android-aar:<VERSION>`.
+- Consumers can resolve the new Android artifact version from Maven Central.
 
 ## 8) Failure handling and rollback
 
 - If the workflow fails before publish jobs run, fix the issue and re-run.
-- If one publish target succeeds and another fails, treat `<VERSION>` as potentially consumed; prefer a new patch version and a new tag instead of reusing the same version.
-- If GitHub Release creation fails after package publication, re-run only after confirming asset/version consistency.
+- If Maven Central publish succeeds but a later release step fails, treat `<VERSION>` as consumed; prefer a new patch version and a new tag instead of reusing the same version.
+- If GitHub Release creation fails after Maven Central publication, re-run only after confirming asset/version consistency.
 - If the wrong tag was used and nothing was published, delete the tag and re-run with the correct tag.
 - Do not force-overwrite a released version in Maven repositories; publish a new version instead.

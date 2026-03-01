@@ -1,103 +1,41 @@
-import org.gradle.api.publish.maven.MavenPublication
-import org.gradle.jvm.tasks.Jar
-
 plugins {
     id("com.android.library")
-    `maven-publish`
-    signing
+    id("com.vanniktech.maven.publish") version "0.36.0"
 }
 
 android {
     namespace = "noise.protocol.android.aar"
     compileSdk = 35
-
-    defaultConfig {
-        minSdk = 26
-        consumerProguardFiles("consumer-rules.pro")
-    }
-
-    publishing {
-        singleVariant("release") {
-            withSourcesJar()
-        }
-    }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
-    }
+    defaultConfig { minSdk = 26 }
 }
 
-dependencies {
-    api(project(":noise-core"))
-    api(project(":noise-crypto"))
-}
+mavenPublishing {
+    publishToMavenCentral(automaticRelease = true) // auto publish after validation
+    signAllPublications()
 
-val docsJar by tasks.registering(Jar::class) {
-    archiveClassifier.set("javadoc")
-    from(rootProject.file("../README.md"))
-}
+    coordinates("ch.trancee", "noise-android-aar", version.toString())
 
-publishing {
-    publications {
-        register<MavenPublication>("release") {
-            artifactId = "noise-android-aar"
-            pom {
-                name.set("Noise Protocol Android AAR")
-                description.set("Android AAR wrapper for noise-core and noise-crypto modules.")
-            }
-            artifact(docsJar)
-        }
-    }
-    repositories {
-        val githubPackagesUrl = providers.environmentVariable("GITHUB_PACKAGES_URL").orNull
-            ?: providers.environmentVariable("GITHUB_REPOSITORY").orNull?.let {
-                "https://maven.pkg.github.com/$it"
-            }
-        val externalMavenUrl = providers.environmentVariable("MAVEN_REPOSITORY_URL").orNull
-        val externalMavenUsername = providers.environmentVariable("MAVEN_REPOSITORY_USERNAME").orNull
-            ?: providers.environmentVariable("MAVEN_USERNAME").orNull
-        val externalMavenPassword = providers.environmentVariable("MAVEN_REPOSITORY_PASSWORD").orNull
-            ?: providers.environmentVariable("MAVEN_PASSWORD").orNull
-
-        if (!githubPackagesUrl.isNullOrBlank()) {
-            maven {
-                name = "GitHubPackages"
-                url = uri(githubPackagesUrl)
-                credentials {
-                    username = providers.environmentVariable("GITHUB_ACTOR").orNull
-                    password = providers.environmentVariable("GITHUB_TOKEN").orNull
-                }
+    pom {
+        name.set("Noise Protocol Android AAR")
+        description.set("Android AAR wrapper for noise-core and noise-crypto modules.")
+        url.set("https://github.com/trancee/noise-protocol")
+        licenses {
+            license {
+                name.set("Unlicense")
+                url.set("https://unlicense.org/")
             }
         }
-
-        if (!externalMavenUrl.isNullOrBlank()) {
-            maven {
-                name = "ExternalMaven"
-                url = uri(externalMavenUrl)
-                credentials {
-                    username = externalMavenUsername
-                    password = externalMavenPassword
-                }
+        developers {
+            developer {
+                id.set("trancee")
+                name.set("trancee")
+                url.set("https://github.com/trancee")
             }
         }
-    }
-}
-
-afterEvaluate {
-    publishing.publications.named("release", MavenPublication::class.java) {
-        from(components["release"])
-    }
-}
-
-signing {
-    val signingKeyId = providers.gradleProperty("signingKeyId").orNull
-    val signingKey = providers.gradleProperty("signingKey").orNull
-    val signingPassword = providers.gradleProperty("signingPassword").orNull
-
-    isRequired = false
-    if (!signingKey.isNullOrBlank() && !signingPassword.isNullOrBlank()) {
-        useInMemoryPgpKeys(signingKeyId, signingKey, signingPassword)
-        sign(publishing.publications)
+        scm {
+            url.set("https://github.com/trancee/noise-protocol")
+            connection.set("scm:git:git://github.com/trancee/noise-protocol.git")
+            developerConnection.set("scm:git:ssh://git@github.com/trancee/noise-protocol.git")
+        }
     }
 }
