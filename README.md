@@ -20,6 +20,7 @@ Current scope:
   - `:noise-core`
   - `:noise-crypto`
   - `:noise-testing`
+  - source/test package directories follow `noise/protocol/...`
 - `ios/`: Swift Package
   - `NoiseCore`
   - `NoiseCryptoAdapters`
