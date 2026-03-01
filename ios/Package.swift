@@ -3,7 +3,6 @@ import PackageDescription
 
 let packageSwiftSettings: [SwiftSetting] = [
     .swiftLanguageMode(.v6),
-    .unsafeFlags(["-strict-concurrency=complete", "-warnings-as-errors"]),
 ]
 
 let package = Package(

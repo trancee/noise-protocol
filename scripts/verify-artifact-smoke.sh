@@ -18,6 +18,18 @@ fi
 echo "[artifact-smoke] Verifying release version parity contract..."
 bash "$repo_root/scripts/verify-version-parity.sh"
 
+swift_manifests=(
+  "$repo_root/Package.swift"
+  "$repo_root/ios/Package.swift"
+)
+
+for swift_manifest in "${swift_manifests[@]}"; do
+  if rg -q '\.unsafeFlags\(' "$swift_manifest"; then
+    echo "[artifact-smoke] Swift manifest contains unsafeFlags and cannot be consumed as a package dependency: $swift_manifest" >&2
+    exit 1
+  fi
+done
+
 echo "[artifact-smoke] Building and publishing Android artifact to Maven local..."
 (
   cd "$repo_root/android"
