@@ -20,7 +20,7 @@ Current scope:
   - `:noise-core`
   - `:noise-crypto`
   - `:noise-testing`
-  - `:noise-android-aar` (publishable AAR wrapper)
+  - `:noise-protocol` (publishable Android AAR module; Maven artifact `noise-protocol`)
   - source/test package directories follow `noise/protocol/...`
 - `Package.swift`: canonical Swift Package entrypoint for repository/tag-based consumption
 - `ios/`: Swift sources/tests (with compatibility `ios/Package.swift` manifest)
@@ -45,14 +45,12 @@ Current scope:
   - manual dispatch with a `tag` input
 - Publish targets:
   - Maven Central artifacts:
-    - `ch.trancee:noise-core:<VERSION>`
-    - `ch.trancee:noise-crypto:<VERSION>`
-    - `ch.trancee:noise-android-aar:<VERSION>`
-    - Task: `:noise-core:publishToMavenCentral :noise-crypto:publishToMavenCentral :noise-android-aar:publishAndReleaseToMavenCentral`
+    - `ch.trancee:noise-protocol:<VERSION>`
+    - Task: `:noise-protocol:publishAndReleaseToMavenCentral`
     - Required secrets: `MAVEN_CENTRAL_USERNAME`, `MAVEN_CENTRAL_PASSWORD`, `MAVEN_SIGNING_KEY`, `MAVEN_SIGNING_PASSWORD`
 - Published GitHub release assets:
-  - `noise-android-<tag>.tar.gz` (Android `noise-core`, `noise-crypto`, `noise-testing` JARs)
-  - `noise-android-aar-<tag>.aar` (Android AAR artifact for direct consumption)
+  - `noise-protocol-<tag>.tar.gz` (Android `noise-core`, `noise-crypto`, `noise-testing` JARs)
+  - `noise-protocol-<tag>.aar` (Android AAR artifact for direct consumption)
   - `noise-ios-swiftpm-<tag>.tar.gz` (Swift Package manifest + Sources + `VERSION`)
   - `SHA256SUMS.txt`
 
@@ -62,7 +60,7 @@ Minimum supported Android API level: 23.
 
 ### 1) Add dependency
 
-Published Android artifacts are uploaded by release workflow to Maven Central. `noise-android-aar` exposes `noise-core` and `noise-crypto` via transitive dependencies.
+Published Android artifacts are uploaded by release workflow to Maven Central as a single coordinate. `ch.trancee:noise-protocol` bundles `noise-core` and `noise-crypto` classes directly in the AAR.
 
 Example (`build.gradle.kts` in your app project):
 
@@ -72,7 +70,7 @@ repositories {
 }
 
 dependencies {
-    implementation("ch.trancee:noise-android-aar:<VERSION>")
+    implementation("ch.trancee:noise-protocol:<VERSION>")
 }
 ```
 
@@ -250,7 +248,7 @@ bash ./scripts/verify-version-parity.sh
 # Android
 cd android
 gradle --no-daemon --console=plain :noise-core:test :noise-crypto:test :noise-testing:test
-gradle --no-daemon --console=plain :noise-android-aar:assembleRelease :noise-android-aar:publishReleasePublicationToMavenLocal
+gradle --no-daemon --console=plain :noise-protocol:assembleRelease :noise-protocol:publishToMavenLocal
 cd ..
 
 # iOS (repository-root Swift Package entrypoint)
