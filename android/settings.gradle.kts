@@ -28,9 +28,10 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "noise-android"
+rootProject.name = "noise-protocol"
 
 include(":noise-core")
 include(":noise-crypto")
 include(":noise-testing")
-include(":noise-android-aar")
+include(":noise-protocol")
+project(":noise-protocol").projectDir = file("noise-android")

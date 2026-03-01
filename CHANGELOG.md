@@ -15,12 +15,11 @@ All notable changes to this project are documented in this file.
 
 - Canonical version contract wired across Android Gradle, iOS parity validation, and release workflows.
 - Repository-root `Package.swift` entrypoint for Swift Package consumption from repository tags.
-- Android `noise-android-aar` publishable AAR module with Maven publication metadata.
-- Release workflow job that publishes `noise.protocol:noise-android-aar:<VERSION>` to GitHub Packages (phase 1).
+- Android `noise-protocol` publishable AAR module with Maven publication metadata.
+- Release workflow job that publishes `ch.trancee:noise-protocol:<VERSION>` to Maven Central.
 
 ### Changed
 
 - Release workflow now enforces version parity before build/publish jobs.
 - Release process keeps publishing GitHub release bundles and `SHA256SUMS.txt` alongside package publication.
-- Release workflow now skips external Maven upload when `MAVEN_REPOSITORY_*` secrets are missing, while continuing GitHub Packages and GitHub Release publication.
-- GitHub Release now includes a direct `noise-android-aar-<tag>.aar` asset in addition to archive bundles.
+- GitHub Release now includes a direct `noise-protocol-<tag>.aar` asset in addition to archive bundles.

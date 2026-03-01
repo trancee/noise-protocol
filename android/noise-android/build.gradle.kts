@@ -9,9 +9,16 @@ android {
     defaultConfig { minSdk = 23 }
 }
 
+val noiseCoreJar = project(":noise-core").layout.buildDirectory.file("libs/noise-core-${version}.jar")
+val noiseCryptoJar = project(":noise-crypto").layout.buildDirectory.file("libs/noise-crypto-${version}.jar")
+
+tasks.named("preBuild") {
+    dependsOn(":noise-core:assemble", ":noise-crypto:assemble")
+}
+
 dependencies {
-    api(project(":noise-core"))
-    api(project(":noise-crypto"))
+    api(files(noiseCoreJar))
+    api(files(noiseCryptoJar))
 }
 
 mavenPublishing {
@@ -35,11 +42,11 @@ mavenPublishing {
         signAllPublications()
     }
 
-    coordinates("ch.trancee", "noise-android-aar", version.toString())
+    coordinates("ch.trancee", "noise-protocol", version.toString())
 
     pom {
-        name.set("Noise Protocol Android AAR")
-        description.set("Android AAR wrapper for noise-core and noise-crypto modules.")
+        name.set("Noise Protocol Android")
+        description.set("Android AAR distribution bundling Noise Protocol core and crypto APIs.")
         url.set("https://github.com/trancee/noise-protocol")
         licenses {
             license {

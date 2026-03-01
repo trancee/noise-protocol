@@ -102,13 +102,11 @@ If all jobs pass, the workflow publishes:
 
 1. **Maven Central**  
    Artifacts:
-   - `ch.trancee:noise-core:<VERSION>`
-   - `ch.trancee:noise-crypto:<VERSION>`
-   - `ch.trancee:noise-android-aar:<VERSION>`  
-   Task: `:noise-core:publishToMavenCentral :noise-crypto:publishToMavenCentral :noise-android-aar:publishAndReleaseToMavenCentral`
+   - `ch.trancee:noise-protocol:<VERSION>`  
+   Task: `:noise-protocol:publishAndReleaseToMavenCentral`
 2. **GitHub Release assets**
-   - `noise-android-<tag>.tar.gz` (Android `noise-core`, `noise-crypto`, `noise-testing` JARs, plus AAR in archive)
-   - `noise-android-aar-<tag>.aar` (direct Android AAR asset)
+   - `noise-protocol-<tag>.tar.gz` (Android `noise-core`, `noise-crypto`, `noise-testing` JARs, plus AAR in archive)
+   - `noise-protocol-<tag>.aar` (direct Android AAR asset)
    - `noise-ios-swiftpm-<tag>.tar.gz` (Swift package manifest + sources + `VERSION`)
    - `SHA256SUMS.txt` (generated from release `.tar.gz` and `.aar` assets)
 
@@ -117,9 +115,7 @@ If all jobs pass, the workflow publishes:
 - Workflow run is green for all jobs in `.github/workflows/release.yml`.
 - GitHub Release exists for `v<VERSION>` with all assets above.
 - `SHA256SUMS.txt` validates downloaded release archives.
-- Maven Central contains `ch.trancee:noise-core:<VERSION>`.
-- Maven Central contains `ch.trancee:noise-crypto:<VERSION>`.
-- Maven Central contains `ch.trancee:noise-android-aar:<VERSION>`.
+- Maven Central contains `ch.trancee:noise-protocol:<VERSION>`.
 - Consumers can resolve the new Android artifact version from Maven Central.
 
 ## 8) Failure handling and rollback

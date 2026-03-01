@@ -63,23 +63,23 @@ jobs:
         run: gradle --no-daemon --console=plain :noise-core:test :noise-crypto:test :noise-testing:test
       - name: Build Android jars and AAR
         working-directory: android
-        run: gradle --no-daemon --console=plain :noise-core:jar :noise-crypto:jar :noise-testing:jar :noise-android-aar:assembleRelease
+        run: gradle --no-daemon --console=plain :noise-core:jar :noise-crypto:jar :noise-testing:jar :noise-protocol:assembleRelease
       - name: Package Android artifacts
         run: |
           mkdir -p release/android
           cp android/noise-core/build/libs/noise-core-*.jar release/android/
           cp android/noise-crypto/build/libs/noise-crypto-*.jar release/android/
           cp android/noise-testing/build/libs/noise-testing-*.jar release/android/
-          cp android/noise-android-aar/build/outputs/aar/noise-android-aar-release.aar release/android/
-          cp android/noise-android-aar/build/outputs/aar/noise-android-aar-release.aar "noise-android-aar-${RELEASE_TAG}.aar"
-          tar -C release -czf "noise-android-${RELEASE_TAG}.tar.gz" android
+          cp android/noise-android/build/outputs/aar/noise-protocol-release.aar release/android/
+          cp android/noise-android/build/outputs/aar/noise-protocol-release.aar "noise-protocol-${RELEASE_TAG}.aar"
+          tar -C release -czf "noise-protocol-${RELEASE_TAG}.tar.gz" android
       - name: Upload Android release bundle
         uses: actions/upload-artifact@v4
         with:
           name: android-release-asset
           path: |
-            noise-android-${{ env.RELEASE_TAG }}.tar.gz
-            noise-android-aar-${{ env.RELEASE_TAG }}.aar
+            noise-protocol-${{ env.RELEASE_TAG }}.tar.gz
+            noise-protocol-${{ env.RELEASE_TAG }}.aar
           if-no-files-found: error
 
   build-ios:
@@ -156,14 +156,14 @@ jobs:
           if [[ "$missing" -ne 0 ]]; then
             exit 1
           fi
-      - name: Publish Android artifacts to Maven Central
+      - name: Publish Android artifact to Maven Central
         working-directory: android
         env:
           ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
           ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
           ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.MAVEN_SIGNING_KEY }}
           ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.MAVEN_SIGNING_PASSWORD }}
-        run: gradle --no-daemon --console=plain :noise-core:publishToMavenCentral :noise-crypto:publishToMavenCentral :noise-android-aar:publishAndReleaseToMavenCentral
+        run: gradle --no-daemon --console=plain :noise-protocol:publishAndReleaseToMavenCentral
 
   publish-release:
     name: Publish GitHub release
@@ -193,7 +193,7 @@ jobs:
           target_commitish: ${{ github.sha }}
           generate_release_notes: true
           files: |
-            release-assets/noise-android-${{ env.RELEASE_TAG }}.tar.gz
-            release-assets/noise-android-aar-${{ env.RELEASE_TAG }}.aar
+            release-assets/noise-protocol-${{ env.RELEASE_TAG }}.tar.gz
+            release-assets/noise-protocol-${{ env.RELEASE_TAG }}.aar
             release-assets/noise-ios-swiftpm-${{ env.RELEASE_TAG }}.tar.gz
             release-assets/SHA256SUMS.txt
