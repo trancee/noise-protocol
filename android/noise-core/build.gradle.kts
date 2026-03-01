@@ -1,6 +1,6 @@
 plugins {
-    alias(libs.plugins.kotlin.jvm)
-    id("com.vanniktech.maven.publish") version "0.36.0"
+    id("org.jetbrains.kotlin.jvm")
+    id("com.vanniktech.maven.publish")
 }
 
 kotlin {
