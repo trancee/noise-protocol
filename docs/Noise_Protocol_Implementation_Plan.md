@@ -18,7 +18,7 @@
 
 | Area | Floor / Policy |
 |---|---|
-| minSdk | 26 (Android 8.0) |
+| minSdk | 23 (Android 6.0) |
 | targetSdk | 35 for initial implementation; bump to latest stable Android API in dedicated version-bump PRs |
 | compileSdk | 35 for initial implementation; keep equal to targetSdk |
 | Java / Kotlin | Java 17 toolchain, Kotlin 2.x (exact patch pinned) |
