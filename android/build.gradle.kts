@@ -1,6 +1,6 @@
 plugins {
     id("com.android.library") apply false
-    id("com.vanniktech.maven.publish") version "0.36.0" apply false
+    id("com.vanniktech.maven.publish") apply false
 }
 
 val canonicalVersion = run {
