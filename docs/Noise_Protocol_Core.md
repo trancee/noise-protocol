@@ -76,6 +76,9 @@ Rules:
 - The current handshake hash should be available to callers for channel binding during or after the handshake.
 - Public APIs should expose enough progress state for callers to enforce turn-taking cleanly, including whether the handshake is complete and which side is expected to send next.
 
+Repository API note:
+- Both platform surfaces expose stateful handshake-session style APIs on top of the underlying handshake state machine, with framed message helpers and progress inspection for strict turn-taking.
+
 ---
 
 ## 3. Transport Phase

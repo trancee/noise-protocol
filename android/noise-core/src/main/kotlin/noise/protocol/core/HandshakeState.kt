@@ -126,6 +126,12 @@ class HandshakeState private constructor(
 
     fun expectedDirection(): MessageDirection? = pattern.messages.getOrNull(messageIndex)?.direction
 
+    fun expectedTokenPayloads(): List<HandshakeToken>? = pattern.messages.getOrNull(messageIndex)
+        ?.tokens
+        ?.filter { token ->
+            token == HandshakeToken.E || token == HandshakeToken.S
+        }
+
     fun isComplete(): Boolean = messageIndex >= pattern.messages.size
 
     fun handshakeHash(): ByteArray = symmetricState.handshakeHash

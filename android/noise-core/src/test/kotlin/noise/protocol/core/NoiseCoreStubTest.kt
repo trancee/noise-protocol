@@ -257,6 +257,51 @@ class NoiseCoreStubTest {
         }
     }
 
+    @Test
+    fun handshakeSessionExposesFramedMessagesAndProgress() {
+        val initiator = HandshakeSession()
+        initiator.initialize(
+            pattern = HandshakePattern.XX,
+            role = HandshakeRole.INITIATOR,
+            cryptoSuite = fakeCryptoSuite,
+            localStatic = keyPair(10),
+            ephemeralKeyGenerator = { keyPair(11) }
+        )
+
+        val responder = HandshakeSession()
+        responder.initialize(
+            pattern = HandshakePattern.XX,
+            role = HandshakeRole.RESPONDER,
+            cryptoSuite = fakeCryptoSuite,
+            localStatic = keyPair(20),
+            ephemeralKeyGenerator = { keyPair(21) }
+        )
+
+        assertEquals(MessageDirection.INITIATOR_TO_RESPONDER, initiator.expectedDirection())
+        assertEquals(MessageDirection.INITIATOR_TO_RESPONDER, responder.expectedDirection())
+        assertTrue(!initiator.isComplete())
+        assertTrue(!responder.isComplete())
+
+        val initialHandshakeHash = initiator.handshakeHash()
+        val message1 = initiator.writeMessage("one".encodeToByteArray())
+        assertArrayEquals("one".encodeToByteArray(), responder.readMessage(message1))
+        assertTrue(!initialHandshakeHash.contentEquals(initiator.handshakeHash()))
+        assertEquals(MessageDirection.RESPONDER_TO_INITIATOR, initiator.expectedDirection())
+        assertEquals(MessageDirection.RESPONDER_TO_INITIATOR, responder.expectedDirection())
+
+        val message2 = responder.writeMessage("two".encodeToByteArray())
+        assertArrayEquals("two".encodeToByteArray(), initiator.readMessage(message2))
+        assertEquals(MessageDirection.INITIATOR_TO_RESPONDER, initiator.expectedDirection())
+        assertEquals(MessageDirection.INITIATOR_TO_RESPONDER, responder.expectedDirection())
+
+        val message3 = initiator.writeMessage("three".encodeToByteArray())
+        assertArrayEquals("three".encodeToByteArray(), responder.readMessage(message3))
+        assertEquals(null, initiator.expectedDirection())
+        assertEquals(null, responder.expectedDirection())
+        assertTrue(initiator.isComplete())
+        assertTrue(responder.isComplete())
+    }
+
     private class FakeNoiseCryptoSuite : NoiseCryptoSuite {
         override val hash: NoiseHashFunction = FakeHashFunction()
         override val keyDerivation: NoiseKeyDerivationFunction = FakeKeyDerivationFunction(hash)

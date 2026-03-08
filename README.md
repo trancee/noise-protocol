@@ -142,6 +142,35 @@ val decoded = HandshakeMessage.decode(
 `HandshakeMessage.encoded()` uses a 16-bit big-endian frame layout and rejects messages larger than 65,535 bytes, matching the Noise framework guidance for application-level framing.
 After each handshake step, `initiator.handshakeHash()` exposes the current transcript hash for channel binding, and `CipherState.setNonce(...)` can be used for monotonic nonce overrides in out-of-order transport integrations.
 
+For a higher-level stateful API that mirrors the Swift package surface more closely, use `HandshakeSession`:
+
+```kotlin
+val initiatorSession = HandshakeSession()
+initiatorSession.initialize(
+  pattern = defaultConfig.pattern,
+  role = HandshakeRole.INITIATOR,
+  cryptoSuite = suite,
+  protocolName = defaultConfig.protocolName,
+  localStatic = initiatorStatic,
+  remoteStatic = responderStatic.publicKey
+)
+
+val responderSession = HandshakeSession()
+responderSession.initialize(
+  pattern = defaultConfig.pattern,
+  role = HandshakeRole.RESPONDER,
+  cryptoSuite = suite,
+  protocolName = defaultConfig.protocolName,
+  localStatic = responderStatic,
+  remoteStatic = initiatorStatic.publicKey
+)
+
+val outbound = initiatorSession.writeMessage("hello".encodeToByteArray())
+val inboundPayload = responderSession.readMessage(outbound)
+check(inboundPayload.contentEquals("hello".encodeToByteArray()))
+check(initiatorSession.expectedDirection() == MessageDirection.RESPONDER_TO_INITIATOR)
+```
+
 ### 4) Use a different crypto suite
 
 ```kotlin

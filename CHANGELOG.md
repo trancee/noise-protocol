@@ -34,3 +34,4 @@ All notable changes to this project are documented in this file.
 - Android and iOS core handshake message APIs now enforce the Noise 65,535-byte message limit consistently, expose shared framed encoding helpers in core, and reuse those helpers from the Android test harness.
 - The iOS core API now exposes handshake-hash access for channel binding and monotonic `NoiseCipherState.setNonce(_:)` control for out-of-order transport handling, matching existing Noise guidance and Android capabilities more closely.
 - The iOS handshake session now exposes expected message direction and completion state so callers can drive strict Noise turn-taking explicitly, matching the Android handshake-state surface more closely.
+- Android now exposes a `HandshakeSession` wrapper with framed read/write helpers, transcript-hash access, and handshake progress inspection so the Kotlin surface is closer to the Swift session API and easier to use correctly.
