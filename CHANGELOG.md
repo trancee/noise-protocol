@@ -31,6 +31,7 @@ All notable changes to this project are documented in this file.
 - Android and iOS core pattern tables, benchmarks, and bootstrap tests now also cover the one-way Noise patterns `N`, `K`, and `X`.
 - Android and iOS core state machines now support `pskN` protocol-name modifiers for the currently supported base patterns, including `MixKeyAndHash()` handling and regression coverage for `psk0` and `psk2` flows.
 - Android and iOS core protocol-name validation now rejects unsupported modifier grammar and base-pattern mismatches instead of silently treating them as plain patterns.
+- Shared vector schema, Android/iOS harnesses, and cross-platform interop checks now carry optional `pre_shared_keys` input and validate representative `NNpsk0` and `XXpsk2` fixture artifacts from the canonical shared corpus.
 - Release process keeps publishing GitHub release bundles and `SHA256SUMS.txt` alongside package publication.
 - GitHub Release now includes a direct `noise-protocol-<tag>.aar` asset in addition to archive bundles.
 - Swift package manifests no longer use `unsafeFlags`, allowing downstream iOS apps to consume package targets.

@@ -111,6 +111,15 @@
             }
           }
         },
+        "pre_shared_keys": {
+          "type": "object",
+          "propertyNames": {
+            "pattern": "^psk[0-9]+$"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/non_empty_hex"
+          }
+        },
         "payloads": {
           "type": "array",
           "minItems": 1,

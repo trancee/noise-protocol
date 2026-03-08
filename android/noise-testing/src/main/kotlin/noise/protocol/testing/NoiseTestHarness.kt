@@ -88,6 +88,7 @@ enum class VectorHashAlgorithm {
 data class VectorInputs(
     val prologue: ByteArray,
     val keyMaterial: VectorKeyMaterial,
+    val preSharedKeys: Map<Int, ByteArray>,
     val payloads: List<VectorPayload>
 )
 
@@ -288,8 +289,23 @@ class NoiseVectorFixtureLoader(
         return VectorInputs(
             prologue = inputsObject.requireHex("prologue"),
             keyMaterial = parseKeyMaterial(inputsObject.requireObject("key_material")),
+            preSharedKeys = inputsObject.optionalObject("pre_shared_keys")?.let(::parsePreSharedKeys).orEmpty(),
             payloads = inputsObject.requireArray("payloads").map { parsePayload(it.jsonObject) }
         )
+    }
+
+    private fun parsePreSharedKeys(preSharedKeysObject: JsonObject): Map<Int, ByteArray> {
+        return preSharedKeysObject.entries.associate { (key, value) ->
+            val placement = key.removePrefix("psk").toIntOrNull()
+                ?: error("Unsupported pre-shared key label '$key'.")
+            val hex = value.jsonPrimitive.contentOrNull
+                ?: error("Pre-shared key '$key' must be a hexadecimal string.")
+            placement to try {
+                HEX_FORMAT.parseHex(hex)
+            } catch (error: IllegalArgumentException) {
+                throw IllegalArgumentException("Pre-shared key '$key' is not valid hexadecimal.", error)
+            }
+        }
     }
 
     private fun parseKeyMaterial(keyMaterialObject: JsonObject): VectorKeyMaterial {
@@ -383,6 +399,10 @@ class NoiseVectorFixtureLoader(
 
     private fun JsonObject.requireArray(fieldName: String): JsonArray {
         return this[fieldName]?.jsonArray ?: error("Fixture field '$fieldName' is missing or is not an array.")
+    }
+
+    private fun JsonObject.optionalObject(fieldName: String): JsonObject? {
+        return this[fieldName]?.jsonObject
     }
 
     private fun JsonObject.requireString(fieldName: String): String {
@@ -652,6 +672,7 @@ class NoiseTestHarness(
             cryptoSuite = suite,
             protocolName = vector.protocol.name,
             prologue = vector.inputs.prologue,
+            preSharedKeys = vector.inputs.preSharedKeys,
             localStatic = initiatorStatic,
             remoteStatic = responderStatic.publicKey,
             ephemeralKeyGenerator = initiatorEphemeralQueue::next
@@ -662,6 +683,7 @@ class NoiseTestHarness(
             cryptoSuite = suite,
             protocolName = vector.protocol.name,
             prologue = vector.inputs.prologue,
+            preSharedKeys = vector.inputs.preSharedKeys,
             localStatic = responderStatic,
             remoteStatic = initiatorStatic.publicKey,
             ephemeralKeyGenerator = responderEphemeralQueue::next

@@ -23,6 +23,10 @@ class NoiseTestHarnessTest {
         HandshakePattern.IK,
         HandshakePattern.XX
     )
+    private val representativePskVectorIds = setOf(
+        "noise-nnpsk0-25519-chachapoly-sha256",
+        "noise-xxpsk2-25519-chachapoly-sha256"
+    )
 
     private data class CoverageKey(
         val pattern: HandshakePattern,
@@ -56,30 +60,47 @@ class NoiseTestHarnessTest {
     }
 
     @Test
+    fun deterministicRunMatchesExpectedArtifactsForRepresentativePskFixtures() {
+        representativePskVectorIds.forEach { vectorId ->
+            val fixture = repository.requireById(vectorId)
+            val result = harness.runDeterministic(fixture)
+            assertExpectedArtifacts(fixture, result)
+        }
+    }
+
+    @Test
     fun fixtureRepositoryCachesCorpusAndIndexesByVectorId() {
         val firstCatalog = repository.catalog()
         val secondCatalog = repository.catalog()
 
         assertSame(firstCatalog, secondCatalog)
-        assertEquals(80, repository.all().size)
-        assertEquals(16, repository.filter(pattern = HandshakePattern.NN).size)
+        assertEquals(82, repository.all().size)
+        assertEquals(17, repository.filter(pattern = HandshakePattern.NN).size)
         assertEquals(
             1,
             repository.filter(
                 pattern = HandshakePattern.NN,
-                dh = VectorDhAlgorithm.DH_25519,
+                dh = VectorDhAlgorithm.DH_448,
                 cipher = VectorCipherAlgorithm.CHACHA_POLY,
                 hash = VectorHashAlgorithm.SHA256
             ).size
         )
         assertEquals("noise-nn-placeholder", repository.requireById("noise-nn-placeholder").vectorId)
+        assertEquals(
+            "noise-nnpsk0-25519-chachapoly-sha256",
+            repository.requireById("noise-nnpsk0-25519-chachapoly-sha256").vectorId
+        )
     }
 
     @Test
     fun sharedFixtureCorpusCoversAllPatternAndSuiteCombinations() {
         val fixtures = repository.all()
+        val baseFixtures = fixtures.filter { it.inputs.preSharedKeys.isEmpty() }
+        val pskFixtures = fixtures.filter { it.inputs.preSharedKeys.isNotEmpty() }
 
-        assertEquals(80, fixtures.size)
+        assertEquals(82, fixtures.size)
+        assertEquals(80, baseFixtures.size)
+        assertEquals(representativePskVectorIds, pskFixtures.map { it.vectorId }.toSet())
 
         val expectedDhs = setOf(VectorDhAlgorithm.DH_25519, VectorDhAlgorithm.DH_448)
         val expectedCiphers = setOf(VectorCipherAlgorithm.CHACHA_POLY, VectorCipherAlgorithm.AES_GCM)
@@ -90,7 +111,7 @@ class NoiseTestHarnessTest {
             VectorHashAlgorithm.BLAKE2B
         )
 
-        val coverage = fixtures.groupBy {
+        val coverage = baseFixtures.groupBy {
             CoverageKey(
                 pattern = it.protocol.pattern,
                 dh = it.protocol.suite.dh,
@@ -139,8 +160,30 @@ class NoiseTestHarnessTest {
     fun supportedFixturesReturnsEntireCorpusForAndroidProvider() {
         val supported = harness.supportedFixtures(repository)
 
-        assertEquals(80, supported.size)
+        assertEquals(82, supported.size)
         assertTrue(supported.all(harness::isSupported))
+    }
+
+    @Test
+    fun loadsRepresentativePskFixtureFromRepositoryVectors() {
+        val fixturePath = sharedFixturePath("noise-nnpsk0-25519-chachapoly-sha256.json")
+
+        val fixture = harness.loadFixture(fixturePath)
+
+        assertEquals("Noise_NNpsk0_25519_ChaChaPoly_SHA256", fixture.protocol.name)
+        assertArrayEquals(
+            byteArrayOf(
+                0x00, 0x11, 0x22, 0x33,
+                0x44, 0x55, 0x66, 0x77,
+                0x88.toByte(), 0x99.toByte(), 0xaa.toByte(), 0xbb.toByte(),
+                0xcc.toByte(), 0xdd.toByte(), 0xee.toByte(), 0xff.toByte(),
+                0xfe.toByte(), 0xdc.toByte(), 0xba.toByte(), 0x98.toByte(),
+                0x76, 0x54, 0x32, 0x10,
+                0x01, 0x23, 0x45, 0x67,
+                0x89.toByte(), 0xab.toByte(), 0xcd.toByte(), 0xef.toByte()
+            ),
+            fixture.inputs.preSharedKeys.getValue(0)
+        )
     }
 
     private fun assertExpectedArtifacts(fixture: NoiseVectorFixture, result: HarnessRunResult) {

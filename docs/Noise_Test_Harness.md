@@ -220,11 +220,15 @@ The test harness does NOT attempt to:
 - Fixtures must declare `schema_version` and follow the matching major folder: `test-vectors/fixtures/v1/`
 - If the contract changes incompatibly, add a new schema file (`...-v2.schema.json`) and write fixtures under `fixtures/v2/`
 - Each fixture must include protocol metadata, input key material/prologue/payloads, expected handshake outputs (messages/hash/split keys), and negative-case metadata
-- Current v1 corpus covers the full matrix (`80` fixtures):
+- Current v1 corpus includes the full base matrix plus representative PSK-backed fixtures (`82` fixtures total):
   - patterns: `NN`, `NK`, `KK`, `IK`, `XX`
   - DH: `25519`, `448`
   - ciphers: `ChaChaPoly`, `AESGCM`
   - hashes: `SHA256`, `SHA512`, `BLAKE2s`, `BLAKE2b`
+- Additional representative PSK fixtures currently extend the shared contract with:
+  - `Noise_NNpsk0_25519_ChaChaPoly_SHA256`
+  - `Noise_XXpsk2_25519_ChaChaPoly_SHA256`
+- Fixtures may optionally declare `inputs.pre_shared_keys` using `pskN` labels when the protocol name carries PSK modifiers.
 - Fixture file naming for generated matrix vectors is:
   `noise-<pattern-lower>-<dh>-<cipher-lower>-<hash-lower>.json`
 
@@ -268,4 +272,4 @@ The test harness does NOT attempt to:
 ## 15. Cross-Platform Interop Verification Command
 
 - Run `./scripts/verify-cross-platform-interop.sh` from the repository root.
-- The command executes Android and iOS fixture-expected artifact checks against the same shared vector (`noise-nn-placeholder`) and fails if either platform diverges on handshake messages, handshake hash, or split keys.
+- The command executes Android and iOS fixture-expected artifact checks against the baseline shared vector (`noise-nn-placeholder`) plus representative PSK-backed shared vectors (`noise-nnpsk0-25519-chachapoly-sha256` and `noise-xxpsk2-25519-chachapoly-sha256`) and fails if either platform diverges on handshake messages, handshake hash, or split keys.
