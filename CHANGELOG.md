@@ -26,6 +26,7 @@ All notable changes to this project are documented in this file.
 
 - Release workflow now enforces version parity before build/publish jobs.
 - CI and release preflight now verify the tracked upstream Noise spec baseline before platform validation starts.
+- Android and iOS cipher-state implementations now keep the current nonce unchanged when authenticated decryption fails, matching the Noise processing rules.
 - Release process keeps publishing GitHub release bundles and `SHA256SUMS.txt` alongside package publication.
 - GitHub Release now includes a direct `noise-protocol-<tag>.aar` asset in addition to archive bundles.
 - Swift package manifests no longer use `unsafeFlags`, allowing downstream iOS apps to consume package targets.

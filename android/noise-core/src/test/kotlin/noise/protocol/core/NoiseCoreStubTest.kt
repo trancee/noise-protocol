@@ -186,6 +186,25 @@ class NoiseCoreStubTest {
     }
 
     @Test
+    fun cipherStateDoesNotAdvanceNonceWhenDecryptFails() {
+        val cipherState = CipherState(fakeCryptoSuite.cipher, initialKey = byteArrayOf(7, 9, 11))
+
+        val failure = assertThrows(IllegalArgumentException::class.java) {
+            cipherState.decryptWithAd(byteArrayOf(1, 2), byteArrayOf(3, 4, 5))
+        }
+
+        assertEquals("Fake authentication failed.", failure.message)
+        assertEquals(0uL, cipherState.nonce)
+
+        val validCiphertext = cipherState.encryptWithAd(byteArrayOf(1, 2), byteArrayOf(9, 8, 7))
+        assertEquals(1uL, cipherState.nonce)
+
+        val receiver = CipherState(fakeCryptoSuite.cipher, initialKey = byteArrayOf(7, 9, 11))
+        assertArrayEquals(byteArrayOf(9, 8, 7), receiver.decryptWithAd(byteArrayOf(1, 2), validCiphertext))
+        assertEquals(1uL, receiver.nonce)
+    }
+
+    @Test
     fun symmetricStateIsDeterministicWithFakeCrypto() {
         val sender = SymmetricState(
             hashFunction = fakeCryptoSuite.hash,

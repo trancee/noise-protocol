@@ -308,13 +308,14 @@ public struct NoiseCipherState: Sendable, Equatable {
         }
 
         let currentNonce = nonce
-        nonce &+= 1
-        return try cipher.decrypt(
+        let plaintext = try cipher.decrypt(
             key: key,
             nonce: currentNonce,
             associatedData: associatedData,
             ciphertext: ciphertext
         )
+        nonce &+= 1
+        return plaintext
     }
 
     public mutating func rekey(using cipher: any NoiseCipherAlgorithm) throws {

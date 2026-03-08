@@ -35,6 +35,7 @@ Fields:
 Rules:
 - If key == null: plaintext passthrough
 - Nonce increments after every encrypt/decrypt
+- Failed decrypt authentication must not advance the nonce
 - Rekey = encrypt 32 zero bytes at max nonce
 - Implementations may expose monotonic nonce override helpers for out-of-order transport, but must reject nonce regression.
 

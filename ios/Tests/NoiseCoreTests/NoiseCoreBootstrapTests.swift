@@ -178,6 +178,27 @@ func cipherStateNonceBehavior() throws {
     }
 }
 
+@Test("CipherState preserves nonce when decrypt authentication fails")
+func cipherStatePreservesNonceOnDecryptFailure() throws {
+    var state = NoiseCipherState(key: Data([0x42]), nonce: 0)
+    let cipher = FakeCipherAlgorithm()
+
+    do {
+        _ = try state.decryptWithAd(Data([0x01]), ciphertext: Data([0x99, 0x98]), using: cipher)
+        Issue.record("Expected decrypt authentication failure.")
+    } catch {
+        #expect(state.nonce == 0)
+    }
+
+    let ciphertext = try state.encryptWithAd(Data([0x01]), plaintext: Data([0x02]), using: cipher)
+    #expect(state.nonce == 1)
+
+    var receiver = NoiseCipherState(key: Data([0x42]), nonce: 0)
+    let plaintext = try receiver.decryptWithAd(Data([0x01]), ciphertext: ciphertext, using: cipher)
+    #expect(plaintext == Data([0x02]))
+    #expect(receiver.nonce == 1)
+}
+
 @Test("SymmetricState is deterministic with fake crypto")
 func symmetricStateDeterministicWithFakeCrypto() throws {
     let hash = FakeHashAlgorithm()
