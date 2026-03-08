@@ -36,6 +36,7 @@ Rules:
 - If key == null: plaintext passthrough
 - Nonce increments after every encrypt/decrypt
 - Rekey = encrypt 32 zero bytes at max nonce
+- Implementations may expose monotonic nonce override helpers for out-of-order transport, but must reject nonce regression.
 
 ---
 
@@ -72,6 +73,7 @@ Rules:
 - No branching on initiator/responder except message direction
 - Payload encrypted after all pattern tokens
 - Errors abort handshake immediately
+- The current handshake hash should be available to callers for channel binding during or after the handshake.
 
 ---
 

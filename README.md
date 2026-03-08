@@ -140,6 +140,7 @@ val decoded = HandshakeMessage.decode(
 ```
 
 `HandshakeMessage.encoded()` uses a 16-bit big-endian frame layout and rejects messages larger than 65,535 bytes, matching the Noise framework guidance for application-level framing.
+After each handshake step, `initiator.handshakeHash()` exposes the current transcript hash for channel binding, and `CipherState.setNonce(...)` can be used for monotonic nonce overrides in out-of-order transport integrations.
 
 ### 4) Use a different crypto suite
 
@@ -247,9 +248,11 @@ let m3 = try await initiatorSession.writeMessage(payload: Data("done".utf8))
 _ = try await responderSession.readMessage(m3)
 
 let transport = try await initiatorSession.splitTransportStates()
+let channelBinding = try await initiatorSession.handshakeHash()
 ```
 
 Swift `NoiseHandshakeMessage.encoded()` uses the same 16-bit big-endian frame layout and enforces the same 65,535-byte maximum frame size.
+For out-of-order transport use cases, `NoiseCipherState.setNonce(_:)` allows monotonic nonce advancement without resetting keys.
 
 ### 4) Use a different crypto suite
 

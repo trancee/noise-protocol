@@ -238,6 +238,7 @@ public struct NoiseCryptoProvider: Sendable {
 
 public enum NoiseCoreError: Error, Sendable, Equatable {
     case missingKeyMaterial(String)
+    case invalidNonce(expectedMinimum: UInt64, actual: UInt64)
     case nonceOverflow
     case invalidHKDFOutput(expected: Int, actual: Int)
     case unexpectedMessageDirection(expected: NoiseMessageDirection, actual: NoiseMessageDirection)
@@ -263,6 +264,13 @@ public struct NoiseCipherState: Sendable, Equatable {
     public mutating func initializeKey(_ key: Data?) {
         self.key = key
         nonce = 0
+    }
+
+    public mutating func setNonce(_ value: UInt64) throws {
+        guard value >= nonce else {
+            throw NoiseCoreError.invalidNonce(expectedMinimum: nonce, actual: value)
+        }
+        nonce = value
     }
 
     public mutating func encryptWithAd(
@@ -571,6 +579,10 @@ public struct NoiseHandshakeState: Sendable {
         messageIndex >= pattern.messages.count
     }
 
+    public var handshakeHash: Data {
+        symmetricState.handshakeHash
+    }
+
     public mutating func writeMessage(payload: Data, crypto: NoiseCryptoProvider) throws -> NoiseHandshakeMessage {
         let messagePattern = try currentMessagePattern()
         let actualDirection = localDirection
@@ -858,6 +870,13 @@ public actor NoiseHandshakeSession {
             throw NoiseCoreError.handshakeNotInitialized
         }
         return try state.split(hash: cryptoProvider.hash)
+    }
+
+    public func handshakeHash() throws -> Data {
+        guard let state else {
+            throw NoiseCoreError.handshakeNotInitialized
+        }
+        return state.handshakeHash
     }
 
     public func writeMessage(payload: Data) async throws -> Data {

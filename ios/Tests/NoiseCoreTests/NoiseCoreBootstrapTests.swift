@@ -159,6 +159,23 @@ func cipherStateNonceBehavior() throws {
     } catch {
         Issue.record("Unexpected error type: \(error)")
     }
+
+    try state.setNonce(5)
+    #expect(state.nonce == 5)
+
+    do {
+        try state.setNonce(4)
+        Issue.record("Expected nonce regression to be rejected.")
+    } catch let error as NoiseCoreError {
+        if case let .invalidNonce(expectedMinimum, actual) = error {
+            #expect(expectedMinimum == 5)
+            #expect(actual == 4)
+        } else {
+            Issue.record("Unexpected NoiseCoreError: \(error)")
+        }
+    } catch {
+        Issue.record("Unexpected error type: \(error)")
+    }
 }
 
 @Test("SymmetricState is deterministic with fake crypto")
@@ -219,6 +236,34 @@ func handshakeMessageEncodingRejectsOversizedFrames() throws {
     } catch {
         Issue.record("Unexpected error type: \(error)")
     }
+}
+
+@Test("Handshake session exposes handshake hash for channel binding")
+func handshakeSessionExposesHandshakeHash() async throws {
+    let crypto = NoiseCryptoProvider(
+        diffieHellman: FakeDiffieHellmanAlgorithm(),
+        cipher: FakeCipherAlgorithm(),
+        hash: FakeHashAlgorithm()
+    )
+    let configuration = NoiseHandshakeConfiguration(
+        protocolName: .bootstrapDefault,
+        isInitiator: true,
+        handshakePattern: .xx,
+        localStaticKey: NoiseDHKeyPair(privateKey: Data([0xA1]), publicKey: Data([0xB1])),
+        localEphemeralKey: NoiseDHKeyPair(privateKey: Data([0xA2]), publicKey: Data([0xB2]))
+    )
+
+    var expectedState = try NoiseHandshakeState(configuration: configuration, hash: crypto.hash)
+    let session = NoiseHandshakeSession()
+    try await session.initialize(with: configuration, cryptoProvider: crypto)
+
+    #expect(try await session.handshakeHash() == expectedState.handshakeHash)
+
+    let payload = Data("channel-binding".utf8)
+    _ = try expectedState.writeMessage(payload: payload, crypto: crypto)
+    _ = try await session.writeMessageFrame(payload: payload)
+
+    #expect(try await session.handshakeHash() == expectedState.handshakeHash)
 }
 
 @Test("Benchmark deterministic handshake throughput across patterns and built-in suites")
