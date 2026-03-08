@@ -336,4 +336,4 @@ Current compatibility status:
 ## 15. Cross-Platform Interop Verification Command
 
 - Run `./scripts/verify-cross-platform-interop.sh` from the repository root.
-- The command executes Android and iOS fixture-expected artifact checks against the baseline shared vector (`noise-nn-placeholder`) plus representative PSK-backed shared vectors (`noise-nnpsk0-25519-chachapoly-sha256` and `noise-xxpsk2-25519-chachapoly-sha256`) and fails if either platform diverges on handshake messages, handshake hash, or split keys.
+- The command executes Android and iOS fixture-expected artifact checks against the canonical baseline shared vector fixture (`noise-nn-placeholder`) plus representative PSK-backed shared vectors (`noise-nnpsk0-25519-chachapoly-sha256` and `noise-xxpsk2-25519-chachapoly-sha256`) and fails if either platform diverges on handshake messages, handshake hash, or split keys.

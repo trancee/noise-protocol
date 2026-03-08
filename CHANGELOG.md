@@ -44,6 +44,7 @@ All notable changes to this project are documented in this file.
 - iOS now ships built-in `BLAKE2s` and `BLAKE2b` hash/HKDF adapters, allowing the built-in registry and harness to execute the full shared 82-fixture corpus instead of the previous SHA-only subset.
 - Cross-platform interop verification now also runs representative deterministic shared-fixture execution for both `Noise_NN_448_ChaChaPoly_SHA256` and `Noise_NN_25519_ChaChaPoly_BLAKE2s` on Android and iOS.
 - `README.md` now includes a developer-oriented usage guide for Android and Swift consumers, covering default setup, pattern and suite selection, PSK modifiers, best practices, and supported built-in variations.
+- Release-facing docs now use representative fixture IDs in public harness examples and no longer describe the current Android/iOS implementations as placeholder scaffolds.
 - `docs/Noise_Test_Harness.md` now maps the official Noise wiki test-vector format onto this repository's shared fixture schema and documents the current compatibility gaps for fallback, hybrid, and asymmetric-prologue vectors.
 - Android and iOS cipher-state implementations now keep the current nonce unchanged when authenticated decryption fails, matching the Noise processing rules.
 - Android and iOS core pattern tables, benchmarks, and bootstrap tests now cover all 12 fundamental interactive Noise handshake patterns, while the shared vector corpus remains on the current 5-pattern subset.

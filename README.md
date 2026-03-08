@@ -90,7 +90,7 @@ The repository ships representative official-format samples for `NN`, `NN 448`, 
     - `bash ./scripts/verify-version-parity.sh` (CI)
     - `bash ./scripts/verify-version-parity.sh <tag>` (release)
 - Trigger:
-  - push a tag matching `v*` (for example `v0.1.0`)
+  - push a tag matching `v*` (for example `v1.0.0`)
   - manual dispatch with a `tag` input
 - Publish targets:
   - Maven Central artifacts:
@@ -356,8 +356,8 @@ import noise.protocol.testing.NoiseTestHarness
 val harness = NoiseTestHarness(provider)
 val fixtures = harness.loadFixtureRepository(Path.of("../test-vectors/fixtures/v1"))
 
-val deterministic = harness.runDeterministic(fixtures, "noise-nn-placeholder")
-val negative = harness.runNegativeCase(fixtures, "noise-nn-placeholder", "flip-tag-msg1")
+val deterministic = harness.runDeterministic(fixtures, "noise-nn-25519-aesgcm-sha256")
+val negative = harness.runNegativeCase(fixtures, "noise-nn-25519-aesgcm-sha256", "flip-tag-final-message")
 check(deterministic.passed)
 check(!negative.passed)
 ```
@@ -508,11 +508,11 @@ import NoiseTestHarness
 let repository = NoiseVectorFixtureRepository()
 let runner = NoiseVectorRunner()
 
-let deterministic = try await runner.verifyExpected(repository: repository, vectorID: "noise-nn-placeholder")
+let deterministic = try await runner.verifyExpected(repository: repository, vectorID: "noise-nn-25519-aesgcm-sha256")
 let negative = try await runner.verifyNegativeCase(
   repository: repository,
-  vectorID: "noise-nn-placeholder",
-  caseID: "flip-tag-msg1"
+  vectorID: "noise-nn-25519-aesgcm-sha256",
+  caseID: "flip-tag-final-message"
 )
 ```
 
