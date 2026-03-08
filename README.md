@@ -37,8 +37,30 @@ Current scope:
   - `NoiseCryptoAdapters`
   - `NoiseTestHarness`
 - `test-vectors/`: shared schema and fixtures
-  - `fixtures/v1/` contains a full handshake/suite coverage matrix (80 vectors):
+  - `fixtures/v1/` contains the full base handshake/suite coverage matrix (80 vectors) plus representative PSK fixtures (82 vectors total):
     `NN|NK|KK|IK|XX` × `25519|448` × `ChaChaPoly|AESGCM` × `SHA256|SHA512|BLAKE2s|BLAKE2b`
+  - `android/noise-testing` now includes an official Noise wiki vector importer and persisted converter for directly translatable v1 cases; they reject fallback, hybrid, and asymmetric-prologue cases that still require a future schema revision
+
+Official wiki vectors can be converted into shared v1 fixtures from the Android module with:
+
+```bash
+cd android && gradle --no-daemon :noise-testing:convertOfficialNoiseVectors \
+  -PofficialNoiseInput=/absolute/path/to/official-vectors.json \
+  -PofficialNoiseOutput=/absolute/path/to/output-directory
+```
+
+Optional:
+- `-PofficialNoiseSchema=../../schema/noise-vector-v1.schema.json`
+
+Repository wrapper:
+
+```bash
+bash ./scripts/convert-official-noise-vectors.sh \
+  ./scripts/testdata/official-noise-nn-vector.json \
+  /absolute/path/to/output-directory
+```
+
+The wrapper resolves repo-relative input and output paths before invoking Gradle.
 
 ## GitHub releases
 

@@ -8,6 +8,8 @@ import java.security.SecureRandom
 interface NoiseDhAdapter : NoiseDiffieHellmanFunction {
     val privateKeyLength: Int
     val publicKeyLength: Int
+
+    fun deriveKeyPair(privateKey: ByteArray): NoiseKeyPair
 }
 
 private val BIG_TWO: BigInteger = BigInteger.valueOf(2)
@@ -57,10 +59,19 @@ abstract class MontgomeryCurveDiffieHellmanAdapter(
     final override fun generateKeyPair(): NoiseKeyPair {
         val privateKey = ByteArray(privateKeyLength)
         RANDOM.nextBytes(privateKey)
-        clampScalar(privateKey)
-        val publicKey = scalarMultiply(privateKey, basePointCoordinate)
+        return deriveKeyPair(privateKey)
+    }
+
+    final override fun deriveKeyPair(privateKey: ByteArray): NoiseKeyPair {
+        require(privateKey.size == privateKeyLength) {
+            "Private key must be $privateKeyLength bytes."
+        }
+
+        val scalar = privateKey.copyOf()
+        clampScalar(scalar)
+        val publicKey = scalarMultiply(scalar, basePointCoordinate)
         return NoiseKeyPair(
-            privateKey = privateKey.copyOf(),
+            privateKey = scalar.copyOf(),
             publicKey = publicKey
         )
     }

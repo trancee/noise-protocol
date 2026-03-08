@@ -26,6 +26,16 @@ All notable changes to this project are documented in this file.
 
 - Release workflow now enforces version parity before build/publish jobs.
 - CI and release preflight now verify the tracked upstream Noise spec baseline before platform validation starts.
+- Android `noise-testing` now imports directly translatable official Noise wiki vectors into the shared v1 fixture contract, deriving local public keys from official private-key inputs and rejecting fallback, hybrid, and asymmetric-prologue cases that still need a future schema revision.
+- Android official-vector importer regression coverage now round-trips representative `NNpsk0` and `XXpsk2` fixtures, including both singular and plural official PSK field spellings.
+- Android official-vector importer regression coverage now also locks in rejection behavior for unsupported `hybrid` vectors, asymmetric prologues, and mismatched initiator/responder PSK inputs.
+- Android official-vector importer regression coverage now also locks in `init_remote_static` and `resp_remote_static` mismatch rejection.
+- Android official-vector importer regression coverage now also locks in official handshake `ciphertext` and `handshake_hash` mismatch rejection.
+- Android `noise-testing` now includes `OfficialNoiseVectorConverter` and `NoiseVectorFixtureWriter` for persisting directly translatable official wiki vectors as canonical shared v1 fixture JSON files.
+- Android `noise-testing` now exposes the official-vector conversion flow through `:noise-testing:convertOfficialNoiseVectors`, parameterized with Gradle properties for input, output, and optional schema path.
+- Repository scripts now include `scripts/convert-official-noise-vectors.sh` plus a smoke test and sample official vector input for the persisted conversion flow.
+- The repository conversion wrapper now normalizes repo-relative paths before invoking the Android Gradle conversion task.
+- `docs/Noise_Test_Harness.md` now maps the official Noise wiki test-vector format onto this repository's shared fixture schema and documents the current compatibility gaps for fallback, hybrid, and asymmetric-prologue vectors.
 - Android and iOS cipher-state implementations now keep the current nonce unchanged when authenticated decryption fails, matching the Noise processing rules.
 - Android and iOS core pattern tables, benchmarks, and bootstrap tests now cover all 12 fundamental interactive Noise handshake patterns, while the shared vector corpus remains on the current 5-pattern subset.
 - Android and iOS core pattern tables, benchmarks, and bootstrap tests now also cover the one-way Noise patterns `N`, `K`, and `X`.
