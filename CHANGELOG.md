@@ -18,10 +18,14 @@ All notable changes to this project are documented in this file.
 - Android `noise-protocol` publishable AAR module with Maven publication metadata.
 - Release workflow job that publishes `ch.trancee:noise-protocol:<VERSION>` to Maven Central.
 - Cached shared-fixture repository APIs for Android and iOS harnesses, including lookup by `vector_id` and support-discovery helpers for supported fixture corpora.
+- Versioned upstream Noise spec lock file, parser regression script, and live website verification script.
+- Weekly `Noise Spec Watch` GitHub Actions workflow for scheduled upstream spec drift checks.
+- Developer guide for upstream Noise tracking and SemVer handling in `docs/Noise_Protocol_Upstream_Tracking.md`.
 
 ### Changed
 
 - Release workflow now enforces version parity before build/publish jobs.
+- CI and release preflight now verify the tracked upstream Noise spec baseline before platform validation starts.
 - Release process keeps publishing GitHub release bundles and `SHA256SUMS.txt` alongside package publication.
 - GitHub Release now includes a direct `noise-protocol-<tag>.aar` asset in addition to archive bundles.
 - Swift package manifests no longer use `unsafeFlags`, allowing downstream iOS apps to consume package targets.

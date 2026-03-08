@@ -8,6 +8,12 @@ Revision: 34
 Date: 2018-07-11
 ```
 
+Tracked upstream baseline:
+- `noise-spec.lock`
+- Local verification: `bash ./scripts/verify-noise-spec-upstream.sh`
+- Scheduled verification: `.github/workflows/noise-spec-watch.yml`
+- Maintenance guide: `docs/Noise_Protocol_Upstream_Tracking.md`
+
 Current scope:
 - Handshake patterns: `NN`, `NK`, `KK`, `IK`, `XX`
 - Core state machines: `CipherState`, `SymmetricState`, `HandshakeState`
@@ -53,6 +59,14 @@ Current scope:
   - `noise-protocol-<tag>.aar` (Android AAR artifact for direct consumption)
   - `noise-ios-swiftpm-<tag>.tar.gz` (Swift Package manifest + Sources + `VERSION`)
   - `SHA256SUMS.txt`
+
+## Versioning policy
+
+- The library follows SemVer from `VERSION` for Android artifacts, Swift Package tags, and release automation.
+- The upstream Noise specification baseline is versioned separately in `noise-spec.lock` and verified in CI, release preflight, and the weekly Noise Spec Watch workflow.
+- A routine upstream re-check that does not change `noise-spec.lock` does not require a library version bump.
+- If an upstream Noise change requires repository changes, choose the release bump by impact: patch for docs/test/automation-only work, minor for additive compatible behavior, major for breaking API or interoperability changes.
+- Detailed maintenance guidance lives in `docs/Noise_Protocol_Upstream_Tracking.md`.
 
 ## Android usage (Kotlin)
 
@@ -325,6 +339,12 @@ let negative = try await runner.verifyNegativeCase(
 ## Verify locally
 
 ```bash
+# Noise spec parser regression check
+bash ./scripts/test-verify-noise-spec-upstream.sh
+
+# Upstream Noise spec baseline
+bash ./scripts/verify-noise-spec-upstream.sh
+
 # Version contract parity
 bash ./scripts/verify-version-parity.sh
 
