@@ -1,0 +1,30 @@
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.BeforeEachCallback;
+import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.jupiter.api.extension.RegisterExtension;
+
+class ExampleExtensionFixtureTest {
+
+    @RegisterExtension
+    static final TemporaryFlagExtension flagExtension = new TemporaryFlagExtension();
+
+    @Test
+    void usesExtensionManagedState() {
+        assertTrue(flagExtension.isReady());
+    }
+
+    static final class TemporaryFlagExtension implements BeforeEachCallback {
+        private boolean ready;
+
+        @Override
+        public void beforeEach(ExtensionContext context) {
+            ready = true;
+        }
+
+        boolean isReady() {
+            return ready;
+        }
+    }
+}

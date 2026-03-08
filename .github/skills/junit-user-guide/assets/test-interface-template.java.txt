@@ -1,0 +1,30 @@
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.TestInstance.Lifecycle;
+import org.junit.jupiter.api.BeforeEach;
+
+@TestInstance(Lifecycle.PER_CLASS)
+interface ExampleRepositoryContract {
+
+    ExampleRepository repository();
+
+    @BeforeEach
+    default void resetState() {
+        ExampleRepository repository = repository();
+
+        repository.clear();
+    }
+
+    @Test
+    default void exposesRepositoryFixture() {
+        ExampleRepository repository = repository();
+
+        assertNotNull(repository);
+    }
+
+    interface ExampleRepository {
+        void clear();
+    }
+}

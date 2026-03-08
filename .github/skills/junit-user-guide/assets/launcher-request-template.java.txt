@@ -1,0 +1,14 @@
+import org.junit.platform.engine.discovery.ClassNameFilter;
+import org.junit.platform.launcher.LauncherDiscoveryRequest;
+import org.junit.platform.launcher.core.LauncherDiscoveryRequestBuilder;
+import static org.junit.platform.engine.discovery.DiscoverySelectors.selectPackage;
+
+class ExampleLauncherRequestFactory {
+
+    LauncherDiscoveryRequest createRequest() {
+        return LauncherDiscoveryRequestBuilder.request()
+            .selectors(selectPackage("com.example.repository"))
+            .filters(ClassNameFilter.includeClassNamePatterns(".*Test"))
+            .build();
+    }
+}

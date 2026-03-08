@@ -1,0 +1,24 @@
+<properties>
+    <maven-surefire-plugin.version>3.5.4</maven-surefire-plugin.version>
+    <!-- Use a JUnit 5.x line on Java 8-11. Move to JUnit 6 only on Java 17+. -->
+    <junit-jupiter.version>5.10.2</junit-jupiter.version>
+</properties>
+
+<dependencies>
+    <dependency>
+        <groupId>org.junit.jupiter</groupId>
+        <artifactId>junit-jupiter</artifactId>
+        <version>${junit-jupiter.version}</version>
+        <scope>test</scope>
+    </dependency>
+</dependencies>
+
+<build>
+    <plugins>
+        <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <version>${maven-surefire-plugin.version}</version>
+        </plugin>
+    </plugins>
+</build>

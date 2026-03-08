@@ -1,0 +1,29 @@
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import java.util.stream.Stream;
+
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+
+class ExampleParameterizedTest {
+
+    @ParameterizedTest(name = "{index}: input={0}, expected={1}")
+    @MethodSource("cases")
+    void computesExpectedValue(String input, int expected) {
+        int actual = compute(input);
+
+        assertEquals(expected, actual);
+    }
+
+    private static Stream<Arguments> cases() {
+        return Stream.of(
+            Arguments.of("sample", 1),
+            Arguments.of("edge", 2)
+        );
+    }
+
+    private int compute(String input) {
+        throw new UnsupportedOperationException("Replace with production call");
+    }
+}

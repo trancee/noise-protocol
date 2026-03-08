@@ -1,0 +1,16 @@
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import org.junit.jupiter.api.RepeatedTest;
+import org.junit.jupiter.api.RepetitionInfo;
+
+class ExampleRepeatedTest {
+
+    private int invocationCount;
+
+    @RepeatedTest(5)
+    void tracksRepetitionAwareState(RepetitionInfo repetitionInfo) {
+        invocationCount++;
+
+        assertEquals(repetitionInfo.getCurrentRepetition(), invocationCount);
+    }
+}
