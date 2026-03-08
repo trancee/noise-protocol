@@ -344,6 +344,7 @@ public struct NoiseSymmetricState: Sendable, Equatable {
 
     public mutating func mixHash(_ data: Data, hash: any NoiseHashAlgorithm) {
         var input = handshakeHash
+        input.reserveCapacity(handshakeHash.count + data.count)
         input.append(data)
         handshakeHash = hash.hash(input)
     }
@@ -354,7 +355,7 @@ public struct NoiseSymmetricState: Sendable, Equatable {
             throw NoiseCoreError.invalidHKDFOutput(expected: 2, actual: outputs.count)
         }
         chainingKey = outputs[0]
-        cipherState.initializeKey(Data(outputs[1].prefix(32)))
+        cipherState.initializeKey(truncateCipherKey(outputs[1]))
     }
 
     public mutating func encryptAndHash(
@@ -383,9 +384,13 @@ public struct NoiseSymmetricState: Sendable, Equatable {
             throw NoiseCoreError.invalidHKDFOutput(expected: 2, actual: outputs.count)
         }
         return NoiseTransportCipherStates(
-            initiatorToResponder: NoiseCipherState(key: Data(outputs[0].prefix(32)), nonce: 0),
-            responderToInitiator: NoiseCipherState(key: Data(outputs[1].prefix(32)), nonce: 0)
+            initiatorToResponder: NoiseCipherState(key: truncateCipherKey(outputs[0]), nonce: 0),
+            responderToInitiator: NoiseCipherState(key: truncateCipherKey(outputs[1]), nonce: 0)
         )
+    }
+
+    private func truncateCipherKey(_ material: Data) -> Data {
+        Data(material.prefix(32))
     }
 }
 
@@ -442,6 +447,10 @@ public struct NoiseHandshakeMessage: Sendable, Equatable {
         }
 
         var output = Data()
+        let keyPayloadBytes = keyPayloads.reduce(0) { partialResult, keyPayload in
+            partialResult + 2 + keyPayload.count
+        }
+        output.reserveCapacity(2 + keyPayloadBytes + 2 + payload.count)
         output.appendUInt16(UInt16(keyPayloads.count))
         for keyPayload in keyPayloads {
             guard keyPayload.count <= Int(UInt16.max) else {

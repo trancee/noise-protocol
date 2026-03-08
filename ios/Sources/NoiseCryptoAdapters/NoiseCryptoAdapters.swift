@@ -240,6 +240,7 @@ private func noiseHKDF(
     var previous = Data()
     for counter in 1...outputCount {
         var input = Data()
+        input.reserveCapacity(previous.count + 1)
         input.append(previous)
         input.append(UInt8(counter))
         previous = hmac(tempKey, input)

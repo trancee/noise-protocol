@@ -187,6 +187,19 @@ func symmetricStateDeterministicWithFakeCrypto() throws {
     #expect(senderSplit == receiverSplit)
 }
 
+@Test("Handshake message encoding round-trips key payloads and body")
+func handshakeMessageEncodingRoundTrip() throws {
+    let message = NoiseHandshakeMessage(
+        keyPayloads: [Data([0x01, 0x02]), Data([0x03, 0x04, 0x05])],
+        payload: Data("payload".utf8)
+    )
+
+    let encoded = try message.encoded()
+    let decoded = try NoiseHandshakeMessage(encoded: encoded)
+
+    #expect(decoded == message)
+}
+
 @Test("Benchmark deterministic handshake throughput across patterns and built-in suites")
 func benchmarkDeterministicHandshakeThroughput() throws {
     let payloadByStep = [

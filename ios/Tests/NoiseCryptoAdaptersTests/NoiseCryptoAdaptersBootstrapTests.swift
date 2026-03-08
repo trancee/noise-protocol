@@ -73,6 +73,21 @@ func hkdfDeterministicOutputCountAndSize() {
     }
 }
 
+@Test("HKDF returns no outputs for invalid output counts")
+func hkdfInvalidOutputCountReturnsEmpty() {
+    let chainingKey = Data("chain-key".utf8)
+    let inputKeyMaterial = Data("input-key-material".utf8)
+    let adapters: [any NoiseHashAdapter] = [
+        SHA256HashAdapter(),
+        SHA512HashAdapter(),
+    ]
+
+    for adapter in adapters {
+        #expect(adapter.hkdf(chainingKey: chainingKey, inputKeyMaterial: inputKeyMaterial, outputCount: 0).isEmpty)
+        #expect(adapter.hkdf(chainingKey: chainingKey, inputKeyMaterial: inputKeyMaterial, outputCount: 256).isEmpty)
+    }
+}
+
 @Test("Curve25519 DH shared secret is symmetric")
 func diffieHellmanSharedSecretSymmetry() throws {
     let adapter = Curve25519DiffieHellmanAdapter()
