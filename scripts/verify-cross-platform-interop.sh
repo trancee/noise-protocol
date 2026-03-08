@@ -18,4 +18,7 @@ echo "[interop] Running iOS deterministic artifact parity test..."
   swift test --filter deterministicExecutionMatchesExpectedArtifactsForRepresentativePskFixtures
 )
 
+echo "[interop] Running official vector conversion parity check..."
+"$repo_root/scripts/verify-official-vector-conversion-parity.sh"
+
 echo "[interop] Cross-platform deterministic fixture parity passed."

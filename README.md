@@ -40,6 +40,7 @@ Current scope:
   - `fixtures/v1/` contains the full base handshake/suite coverage matrix (80 vectors) plus representative PSK fixtures (82 vectors total):
     `NN|NK|KK|IK|XX` × `25519|448` × `ChaChaPoly|AESGCM` × `SHA256|SHA512|BLAKE2s|BLAKE2b`
   - `android/noise-testing` now includes an official Noise wiki vector importer and persisted converter for directly translatable v1 cases; they reject fallback, hybrid, and asymmetric-prologue cases that still require a future schema revision
+  - `ios/NoiseTestHarness` now also includes an official Noise wiki converter and fixture writer for directly translatable `25519` shared v1 cases, with representative `NNpsk0` and `XXpsk2` conversion coverage
 
 Official wiki vectors can be converted into shared v1 fixtures from the Android module with:
 
@@ -61,6 +62,24 @@ bash ./scripts/convert-official-noise-vectors.sh \
 ```
 
 The wrapper resolves repo-relative input and output paths before invoking Gradle.
+
+iOS wrapper:
+
+```bash
+bash ./scripts/convert-official-noise-vectors-ios.sh \
+  ./scripts/testdata/official-noise-nn-vector.json \
+  /absolute/path/to/output-directory
+```
+
+The iOS wrapper resolves repo-relative input and output paths before invoking `swift run NoiseVectorConverterCLI`.
+
+Cross-platform parity check for converted official vectors:
+
+```bash
+bash ./scripts/verify-official-vector-conversion-parity.sh
+```
+
+The repository currently ships representative official-format samples for `NN`, `NNpsk0`, and `XXpsk2` under `scripts/testdata/` and checks Android/iOS shared-fixture parity for all three.
 
 ## GitHub releases
 

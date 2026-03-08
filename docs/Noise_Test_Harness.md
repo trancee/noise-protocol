@@ -284,6 +284,12 @@ Current compatibility status:
 - Importer regression coverage also locks in remote-static validation by rejecting `init_remote_static` or `resp_remote_static` values that do not match the derived local static public keys.
 - Importer regression coverage also locks in transcript-integrity validation by rejecting mismatched official handshake `ciphertext` bytes and `handshake_hash` values.
 - The Android harness module now also includes `OfficialNoiseVectorConverter`, which persists directly translatable official wiki vectors as canonical shared v1 fixture JSON files using `NoiseVectorFixtureWriter`.
+- The iOS `NoiseTestHarness` target now also includes `OfficialNoiseVectorConverter` and `NoiseVectorFixtureWriter` for directly translatable `25519` official wiki vectors, using the existing Swift runner to derive canonical shared-fixture expectations before persistence.
+- Swift Testing coverage now also round-trips representative `Noise_NNpsk0_25519_ChaChaPoly_SHA256` and `Noise_XXpsk2_25519_ChaChaPoly_SHA256` official-format documents through the iOS converter, including singular and plural PSK field spellings.
+- The iOS package also exposes this conversion path through `swift run NoiseVectorConverterCLI --input <path> --output-dir <path> [--schema-path <path>]`, with a repository wrapper at `scripts/convert-official-noise-vectors-ios.sh` and a smoke test in `scripts/test-convert-official-noise-vectors-ios.sh`.
+- The repository also includes `scripts/verify-official-vector-conversion-parity.sh`, which converts the same official input on Android and iOS and compares the semantically important shared-fixture fields across both generated outputs.
+- Representative official-format parity coverage currently includes `Noise_NN_25519_ChaChaPoly_SHA256`, `Noise_NNpsk0_25519_ChaChaPoly_SHA256`, and `Noise_XXpsk2_25519_ChaChaPoly_SHA256` through the sample inputs under `scripts/testdata/`.
+- Swift Testing regression coverage now also locks in the iOS converter's rejection behavior for unsupported `hybrid` vectors, asymmetric prologues, mismatched initiator/responder PSK values or counts, mismatched `init_remote_static` / `resp_remote_static`, and mismatched official handshake `ciphertext` / `handshake_hash` values.
 - The Android module exposes this persisted conversion path through `:noise-testing:convertOfficialNoiseVectors`, using Gradle properties:
   `-PofficialNoiseInput=/absolute/path/to/official-vectors.json`
   `-PofficialNoiseOutput=/absolute/path/to/output-directory`

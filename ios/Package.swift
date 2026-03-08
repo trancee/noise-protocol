@@ -15,6 +15,7 @@ let package = Package(
         .library(name: "NoiseCore", targets: ["NoiseCore"]),
         .library(name: "NoiseCryptoAdapters", targets: ["NoiseCryptoAdapters"]),
         .library(name: "NoiseTestHarness", targets: ["NoiseTestHarness"]),
+        .executable(name: "NoiseVectorConverterCLI", targets: ["NoiseVectorConverterCLI"]),
     ],
     targets: [
         .target(
@@ -29,6 +30,11 @@ let package = Package(
         .target(
             name: "NoiseTestHarness",
             dependencies: ["NoiseCore", "NoiseCryptoAdapters"],
+            swiftSettings: packageSwiftSettings
+        ),
+        .executableTarget(
+            name: "NoiseVectorConverterCLI",
+            dependencies: ["NoiseTestHarness"],
             swiftSettings: packageSwiftSettings
         ),
         .testTarget(
