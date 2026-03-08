@@ -5,9 +5,9 @@ pluginManagement {
         eachPlugin {
             if (requested.id.id == "com.android.library") {
                 val agpVersion = if (GradleVersion.current() >= GradleVersion.version("9.0")) {
-                    "9.0.1"
+                    "9.1.0"
                 } else {
-                    "8.8.2"
+                    "8.13.2"
                 }
                 useModule("com.android.tools.build:gradle:$agpVersion")
             }

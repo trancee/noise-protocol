@@ -29,3 +29,4 @@ All notable changes to this project are documented in this file.
 - Android Kotlin and iOS Swift handshake/HKDF/message-encoding paths now avoid several unnecessary short-lived buffer allocations.
 - Cross-platform harness verification now checks fixture-expected artifacts on both Android and iOS, and benchmark documentation is refreshed from the current benchmark scripts.
 - CI, release, and Swift package toolchain pins now target Java 21, Gradle 9.4.0, Xcode 16.4, and Swift tools 6.1.
+- Android test dependencies now target JUnit 6.0.3, Android Gradle Plugin resolution now uses AGP 9.1.0 on Gradle 9 and AGP 8.13.2 on older Gradle lines, and GitHub Actions pins now track the current checkout/setup/upload/download major releases; Kotlin 2.3.10, kotlinx-serialization-json 1.10.0, the Maven Publish plugin, `softprops/action-gh-release@v2`, and `maxim-lobanov/setup-xcode@v1` were verified as already current.
