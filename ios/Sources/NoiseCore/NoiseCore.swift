@@ -579,6 +579,13 @@ public struct NoiseHandshakeState: Sendable {
         messageIndex >= pattern.messages.count
     }
 
+    public var expectedDirection: NoiseMessageDirection? {
+        guard messageIndex < pattern.messages.count else {
+            return nil
+        }
+        return pattern.messages[messageIndex].direction
+    }
+
     public var handshakeHash: Data {
         symmetricState.handshakeHash
     }
@@ -877,6 +884,20 @@ public actor NoiseHandshakeSession {
             throw NoiseCoreError.handshakeNotInitialized
         }
         return state.handshakeHash
+    }
+
+    public func isComplete() throws -> Bool {
+        guard let state else {
+            throw NoiseCoreError.handshakeNotInitialized
+        }
+        return state.isComplete
+    }
+
+    public func expectedDirection() throws -> NoiseMessageDirection? {
+        guard let state else {
+            throw NoiseCoreError.handshakeNotInitialized
+        }
+        return state.expectedDirection
     }
 
     public func writeMessage(payload: Data) async throws -> Data {

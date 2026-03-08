@@ -249,10 +249,12 @@ _ = try await responderSession.readMessage(m3)
 
 let transport = try await initiatorSession.splitTransportStates()
 let channelBinding = try await initiatorSession.handshakeHash()
+let complete = try await initiatorSession.isComplete()
 ```
 
 Swift `NoiseHandshakeMessage.encoded()` uses the same 16-bit big-endian frame layout and enforces the same 65,535-byte maximum frame size.
 For out-of-order transport use cases, `NoiseCipherState.setNonce(_:)` allows monotonic nonce advancement without resetting keys.
+`NoiseHandshakeSession.expectedDirection()` and `isComplete()` expose handshake progress to callers that need to drive strict turn-taking explicitly.
 
 ### 4) Use a different crypto suite
 

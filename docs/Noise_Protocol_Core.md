@@ -74,6 +74,7 @@ Rules:
 - Payload encrypted after all pattern tokens
 - Errors abort handshake immediately
 - The current handshake hash should be available to callers for channel binding during or after the handshake.
+- Public APIs should expose enough progress state for callers to enforce turn-taking cleanly, including whether the handshake is complete and which side is expected to send next.
 
 ---
 

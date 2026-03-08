@@ -266,6 +266,56 @@ func handshakeSessionExposesHandshakeHash() async throws {
     #expect(try await session.handshakeHash() == expectedState.handshakeHash)
 }
 
+@Test("Handshake session reports expected direction and completion progress")
+func handshakeSessionReportsDirectionAndCompletion() async throws {
+    let crypto = NoiseCryptoProvider(
+        diffieHellman: FakeDiffieHellmanAlgorithm(),
+        cipher: FakeCipherAlgorithm(),
+        hash: FakeHashAlgorithm()
+    )
+    let initiatorConfiguration = NoiseHandshakeConfiguration(
+        protocolName: .bootstrapDefault,
+        isInitiator: true,
+        handshakePattern: .xx,
+        localStaticKey: NoiseDHKeyPair(privateKey: Data([0xA1]), publicKey: Data([0xB1])),
+        localEphemeralKey: NoiseDHKeyPair(privateKey: Data([0xA2]), publicKey: Data([0xB2]))
+    )
+    let responderConfiguration = NoiseHandshakeConfiguration(
+        protocolName: .bootstrapDefault,
+        isInitiator: false,
+        handshakePattern: .xx,
+        localStaticKey: NoiseDHKeyPair(privateKey: Data([0xC1]), publicKey: Data([0xD1])),
+        localEphemeralKey: NoiseDHKeyPair(privateKey: Data([0xC2]), publicKey: Data([0xD2]))
+    )
+
+    let initiator = NoiseHandshakeSession()
+    let responder = NoiseHandshakeSession()
+    try await initiator.initialize(with: initiatorConfiguration, cryptoProvider: crypto)
+    try await responder.initialize(with: responderConfiguration, cryptoProvider: crypto)
+
+    #expect(try await initiator.expectedDirection() == .initiatorToResponder)
+    #expect(!(try await initiator.isComplete()))
+    #expect(try await responder.expectedDirection() == .initiatorToResponder)
+    #expect(!(try await responder.isComplete()))
+
+    let message1 = try await initiator.writeMessageFrame(payload: Data("m1".utf8))
+    _ = try await responder.readMessageFrame(message1)
+    #expect(try await initiator.expectedDirection() == .responderToInitiator)
+    #expect(try await responder.expectedDirection() == .responderToInitiator)
+
+    let message2 = try await responder.writeMessageFrame(payload: Data("m2".utf8))
+    _ = try await initiator.readMessageFrame(message2)
+    #expect(try await initiator.expectedDirection() == .initiatorToResponder)
+    #expect(try await responder.expectedDirection() == .initiatorToResponder)
+
+    let message3 = try await initiator.writeMessageFrame(payload: Data("m3".utf8))
+    _ = try await responder.readMessageFrame(message3)
+    #expect(try await initiator.expectedDirection() == nil)
+    #expect(try await responder.expectedDirection() == nil)
+    #expect(try await initiator.isComplete())
+    #expect(try await responder.isComplete())
+}
+
 @Test("Benchmark deterministic handshake throughput across patterns and built-in suites")
 func benchmarkDeterministicHandshakeThroughput() throws {
     let payloadByStep = [
