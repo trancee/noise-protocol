@@ -363,7 +363,7 @@ public actor NoiseCryptoAdapterRegistry {
     }
 
     public static func builtIn() -> NoiseCryptoAdapterRegistry {
-        NoiseCryptoAdapterRegistry(registeringBuiltIns: true)
+        sharedBuiltInRegistry
     }
 
     public func register(diffieHellman name: String) {
@@ -456,6 +456,8 @@ public actor NoiseCryptoAdapterRegistry {
         SHA256HashAdapter(),
         SHA512HashAdapter(),
     ]
+
+    private static let sharedBuiltInRegistry = NoiseCryptoAdapterRegistry(registeringBuiltIns: true)
 }
 
 public struct NoiseCryptoAdapterFactory: Sendable {

@@ -256,6 +256,7 @@ let customProvider = try await factory.makeProvider(for: customSuite)
 ```
 
 Use `customSuite.protocolName` and `customProvider` when initializing both handshake sessions.
+Default `NoiseCryptoAdapterFactory()` instances share a built-in registry actor, so repeated factory construction does not rebuild the built-in adapter catalog.
 
 ### 5) Reuse the shared iOS vector harness efficiently
 

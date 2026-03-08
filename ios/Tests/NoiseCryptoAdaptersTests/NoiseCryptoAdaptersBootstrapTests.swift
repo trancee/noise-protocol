@@ -148,3 +148,18 @@ func bootstrapDefaultProvider() async throws {
     #expect(keyPair.privateKey.count == 32)
     #expect(keyPair.publicKey.count == 32)
 }
+
+@Test("Built-in registry is shared across default factories")
+func builtInRegistryIsSharedAcrossFactories() async {
+    let first = NoiseCryptoAdapterFactory().registry
+    let second = NoiseCryptoAdapterFactory().registry
+
+    #expect(first === second)
+
+    let snapshot = await first.snapshot()
+    #expect(snapshot.diffieHellman == ["25519"])
+    #expect(snapshot.ciphers.contains("ChaChaPoly"))
+    #expect(snapshot.ciphers.contains("AESGCM"))
+    #expect(snapshot.hashes.contains("SHA256"))
+    #expect(snapshot.hashes.contains("SHA512"))
+}
