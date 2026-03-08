@@ -7,6 +7,9 @@ This document defines **protocol logic only**. It must not reference any concret
 
 ## 1. Supported Handshakes
 
+- Noise_N
+- Noise_K
+- Noise_X
 - Noise_NN
 - Noise_NK
 - Noise_NX
@@ -21,6 +24,9 @@ This document defines **protocol logic only**. It must not reference any concret
 - Noise_XX
 
 Handshake pattern tables (strictly ordered):
+- N: `<- s` (pre-message), `-> e, es`
+- K: `-> s`, `<- s` (pre-messages), `-> e, es, ss`
+- X: `<- s` (pre-message), `-> e, es, s, ss`
 - NN: `-> e`, `<- e, ee`
 - NK: `<- s` (pre-message), `-> e, es`, `<- e, ee`
 - NX: `-> e`, `<- e, ee, s, es`

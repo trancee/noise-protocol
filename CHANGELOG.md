@@ -28,6 +28,7 @@ All notable changes to this project are documented in this file.
 - CI and release preflight now verify the tracked upstream Noise spec baseline before platform validation starts.
 - Android and iOS cipher-state implementations now keep the current nonce unchanged when authenticated decryption fails, matching the Noise processing rules.
 - Android and iOS core pattern tables, benchmarks, and bootstrap tests now cover all 12 fundamental interactive Noise handshake patterns, while the shared vector corpus remains on the current 5-pattern subset.
+- Android and iOS core pattern tables, benchmarks, and bootstrap tests now also cover the one-way Noise patterns `N`, `K`, and `X`.
 - Release process keeps publishing GitHub release bundles and `SHA256SUMS.txt` alongside package publication.
 - GitHub Release now includes a direct `noise-protocol-<tag>.aar` asset in addition to archive bundles.
 - Swift package manifests no longer use `unsafeFlags`, allowing downstream iOS apps to consume package targets.

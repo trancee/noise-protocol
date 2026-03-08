@@ -41,6 +41,40 @@ enum class HandshakePattern(
     val preMessages: List<PreMessagePattern>,
     val messages: List<MessagePattern>
 ) {
+    N(
+        protocolName = "Noise_N",
+        preMessages = listOf(
+            preMessage(MessageDirection.RESPONDER_TO_INITIATOR, HandshakeToken.S)
+        ),
+        messages = listOf(
+            message(MessageDirection.INITIATOR_TO_RESPONDER, HandshakeToken.E, HandshakeToken.ES)
+        )
+    ),
+    K(
+        protocolName = "Noise_K",
+        preMessages = listOf(
+            preMessage(MessageDirection.INITIATOR_TO_RESPONDER, HandshakeToken.S),
+            preMessage(MessageDirection.RESPONDER_TO_INITIATOR, HandshakeToken.S)
+        ),
+        messages = listOf(
+            message(MessageDirection.INITIATOR_TO_RESPONDER, HandshakeToken.E, HandshakeToken.ES, HandshakeToken.SS)
+        )
+    ),
+    X(
+        protocolName = "Noise_X",
+        preMessages = listOf(
+            preMessage(MessageDirection.RESPONDER_TO_INITIATOR, HandshakeToken.S)
+        ),
+        messages = listOf(
+            message(
+                MessageDirection.INITIATOR_TO_RESPONDER,
+                HandshakeToken.E,
+                HandshakeToken.ES,
+                HandshakeToken.S,
+                HandshakeToken.SS
+            )
+        )
+    ),
     NN(
         protocolName = "Noise_NN",
         preMessages = emptyList(),

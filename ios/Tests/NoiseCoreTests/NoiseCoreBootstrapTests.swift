@@ -25,9 +25,33 @@ func bootstrapLibraryVersion() throws {
     #expect(NoiseCoreVersion.libraryVersion == canonicalVersion)
 }
 
-@Test("Pattern table ordering is correct for all fundamental interactive patterns")
+@Test("Pattern table ordering is correct for all currently supported handshake patterns")
 func handshakePatternTableOrdering() {
     let expected: [(NoiseHandshakePatternName, [NoisePatternMessage], [NoisePatternMessage])] = [
+        (
+            .n,
+            [NoisePatternMessage(direction: .responderToInitiator, tokens: [.s])],
+            [
+                NoisePatternMessage(direction: .initiatorToResponder, tokens: [.e, .es]),
+            ]
+        ),
+        (
+            .k,
+            [
+                NoisePatternMessage(direction: .initiatorToResponder, tokens: [.s]),
+                NoisePatternMessage(direction: .responderToInitiator, tokens: [.s]),
+            ],
+            [
+                NoisePatternMessage(direction: .initiatorToResponder, tokens: [.e, .es, .ss]),
+            ]
+        ),
+        (
+            .x,
+            [NoisePatternMessage(direction: .responderToInitiator, tokens: [.s])],
+            [
+                NoisePatternMessage(direction: .initiatorToResponder, tokens: [.e, .es, .s, .ss]),
+            ]
+        ),
         (
             .nn,
             [],
@@ -132,7 +156,7 @@ func handshakePatternTableOrdering() {
         ),
     ]
 
-    #expect(NoiseHandshakePatterns.all.count == 12)
+    #expect(NoiseHandshakePatterns.all.count == 15)
     for (name, preMessages, messages) in expected {
         let pattern = NoiseHandshakePatterns.pattern(named: name)
         #expect(pattern.preMessages == preMessages)
@@ -700,6 +724,15 @@ private func makeBenchmarkHandshakeState(
     let remoteStaticKey: Data?
 
     switch pattern {
+    case .n:
+        localStaticKey = isInitiator ? nil : keyMaterial.responderStatic
+        remoteStaticKey = isInitiator ? keyMaterial.responderStatic.publicKey : nil
+    case .k:
+        localStaticKey = isInitiator ? keyMaterial.initiatorStatic : keyMaterial.responderStatic
+        remoteStaticKey = isInitiator ? keyMaterial.responderStatic.publicKey : keyMaterial.initiatorStatic.publicKey
+    case .x:
+        localStaticKey = isInitiator ? keyMaterial.initiatorStatic : keyMaterial.responderStatic
+        remoteStaticKey = isInitiator ? keyMaterial.responderStatic.publicKey : nil
     case .nn:
         localStaticKey = nil
         remoteStaticKey = nil

@@ -18,6 +18,37 @@ class NoiseCoreStubTest {
     @Test
     fun supportsNoisePatternsWithExpectedTokenTables() {
         val expectedDefinitions = mapOf(
+            HandshakePattern.N to ExpectedPatternDefinition(
+                preMessages = listOf(
+                    PreMessagePattern(MessageDirection.RESPONDER_TO_INITIATOR, listOf(HandshakeToken.S))
+                ),
+                messages = listOf(
+                    MessagePattern(MessageDirection.INITIATOR_TO_RESPONDER, listOf(HandshakeToken.E, HandshakeToken.ES))
+                )
+            ),
+            HandshakePattern.K to ExpectedPatternDefinition(
+                preMessages = listOf(
+                    PreMessagePattern(MessageDirection.INITIATOR_TO_RESPONDER, listOf(HandshakeToken.S)),
+                    PreMessagePattern(MessageDirection.RESPONDER_TO_INITIATOR, listOf(HandshakeToken.S))
+                ),
+                messages = listOf(
+                    MessagePattern(
+                        MessageDirection.INITIATOR_TO_RESPONDER,
+                        listOf(HandshakeToken.E, HandshakeToken.ES, HandshakeToken.SS)
+                    )
+                )
+            ),
+            HandshakePattern.X to ExpectedPatternDefinition(
+                preMessages = listOf(
+                    PreMessagePattern(MessageDirection.RESPONDER_TO_INITIATOR, listOf(HandshakeToken.S))
+                ),
+                messages = listOf(
+                    MessagePattern(
+                        MessageDirection.INITIATOR_TO_RESPONDER,
+                        listOf(HandshakeToken.E, HandshakeToken.ES, HandshakeToken.S, HandshakeToken.SS)
+                    )
+                )
+            ),
             HandshakePattern.NN to ExpectedPatternDefinition(
                 preMessages = emptyList(),
                 messages = listOf(

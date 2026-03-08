@@ -45,6 +45,9 @@ public struct NoiseProtocolDescriptor: Sendable, Hashable {
 }
 
 public enum NoiseHandshakePatternName: String, Sendable, CaseIterable {
+    case n = "N"
+    case k = "K"
+    case x = "X"
     case nn = "NN"
     case nk = "NK"
     case nx = "NX"
@@ -117,6 +120,37 @@ public struct NoiseHandshakePatternDefinition: Sendable, Equatable {
 }
 
 public enum NoiseHandshakePatterns {
+    public static let n = NoiseHandshakePatternDefinition(
+        name: .n,
+        preMessages: [
+            NoisePatternMessage(direction: .responderToInitiator, tokens: [.s]),
+        ],
+        messages: [
+            NoisePatternMessage(direction: .initiatorToResponder, tokens: [.e, .es]),
+        ]
+    )
+
+    public static let k = NoiseHandshakePatternDefinition(
+        name: .k,
+        preMessages: [
+            NoisePatternMessage(direction: .initiatorToResponder, tokens: [.s]),
+            NoisePatternMessage(direction: .responderToInitiator, tokens: [.s]),
+        ],
+        messages: [
+            NoisePatternMessage(direction: .initiatorToResponder, tokens: [.e, .es, .ss]),
+        ]
+    )
+
+    public static let x = NoiseHandshakePatternDefinition(
+        name: .x,
+        preMessages: [
+            NoisePatternMessage(direction: .responderToInitiator, tokens: [.s]),
+        ],
+        messages: [
+            NoisePatternMessage(direction: .initiatorToResponder, tokens: [.e, .es, .s, .ss]),
+        ]
+    )
+
     public static let nn = NoiseHandshakePatternDefinition(
         name: .nn,
         preMessages: [],
@@ -241,10 +275,16 @@ public enum NoiseHandshakePatterns {
         ]
     )
 
-    public static let all: [NoiseHandshakePatternDefinition] = [nn, nk, nx, xn, xk, xx, kn, kk, kx, `in`, ik, ix]
+    public static let all: [NoiseHandshakePatternDefinition] = [n, k, x, nn, nk, nx, xn, xk, xx, kn, kk, kx, `in`, ik, ix]
 
     public static func pattern(named name: NoiseHandshakePatternName) -> NoiseHandshakePatternDefinition {
         switch name {
+        case .n:
+            return n
+        case .k:
+            return k
+        case .x:
+            return x
         case .nn:
             return nn
         case .nk:
