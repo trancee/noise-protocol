@@ -36,6 +36,29 @@ class OfficialNoiseVectorConverterTest {
     }
 
     @Test
+    fun convertsOfficialBlake2sVectorDocumentIntoSharedFixtureFile() {
+        val outputDirectory = Files.createTempDirectory("official-noise-converter-blake2s-")
+
+        val writtenPaths = converter.convertDocument(
+            document = OfficialNoiseVectorImporterTest.OFFICIAL_NN_BLAKE2S_VECTOR_DOCUMENT,
+            outputDirectory = outputDirectory
+        )
+
+        assertEquals(1, writtenPaths.size)
+        val outputPath = writtenPaths.single()
+        assertEquals("noise-nn-25519-chachapoly-blake2s.json", outputPath.fileName.toString())
+
+        val persisted = harness.loadFixture(outputPath)
+        val runResult = harness.runDeterministic(persisted)
+
+        assertEquals("noise-nn-25519-chachapoly-blake2s", persisted.vectorId)
+        assertEquals("Noise_NN_25519_ChaChaPoly_BLAKE2s", persisted.protocol.name)
+        assertEquals(true, runResult.passed)
+        assertArrayEquals(persisted.expected.handshakeHash, runResult.handshakeHash)
+        assertTrue(outputPath.readText().contains("\"hash\": \"BLAKE2s\""))
+    }
+
+    @Test
     fun writesConfiguredSchemaPathIntoPersistedFixture() {
         val outputDirectory = Files.createTempDirectory("official-noise-converter-schema-")
 

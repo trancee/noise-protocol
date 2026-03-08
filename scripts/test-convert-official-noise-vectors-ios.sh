@@ -38,4 +38,20 @@ fi
 grep -q '"vector_id"[[:space:]]*:[[:space:]]*"noise-nn-448-chachapoly-sha256"' "$output_448_file"
 grep -q '"dh"[[:space:]]*:[[:space:]]*"448"' "$output_448_file"
 
+echo "[official-convert-ios-test] Running iOS wrapper script against representative official BLAKE2s vector..."
+(
+  cd "$repo_root"
+  ./scripts/convert-official-noise-vectors-ios.sh "scripts/testdata/official-noise-nn-blake2s-vector.json" "$temp_output/official-blake2s"
+)
+
+output_blake2s_file="$temp_output/official-blake2s/noise-nn-25519-chachapoly-blake2s.json"
+
+if [[ ! -f "$output_blake2s_file" ]]; then
+  echo "[official-convert-ios-test] Expected BLAKE2s output fixture missing: $output_blake2s_file" >&2
+  exit 1
+fi
+
+grep -q '"vector_id"[[:space:]]*:[[:space:]]*"noise-nn-25519-chachapoly-blake2s"' "$output_blake2s_file"
+grep -q '"hash"[[:space:]]*:[[:space:]]*"BLAKE2s"' "$output_blake2s_file"
+
 echo "[official-convert-ios-test] Wrapper script produced the expected shared fixture file."

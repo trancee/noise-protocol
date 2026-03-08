@@ -39,8 +39,7 @@ Current scope:
 - `test-vectors/`: shared schema and fixtures
   - `fixtures/v1/` contains the full base handshake/suite coverage matrix (80 vectors) plus representative PSK fixtures (82 vectors total):
     `NN|NK|KK|IK|XX` × `25519|448` × `ChaChaPoly|AESGCM` × `SHA256|SHA512|BLAKE2s|BLAKE2b`
-  - `android/noise-testing` now includes an official Noise wiki vector importer and persisted converter for directly translatable v1 cases; they reject fallback, hybrid, and asymmetric-prologue cases that still require a future schema revision
-  - `ios/NoiseTestHarness` now also includes an official Noise wiki converter and fixture writer for directly translatable `25519` shared v1 cases, with representative `NNpsk0` and `XXpsk2` conversion coverage
+  - Android and iOS both now support direct conversion of representative official Noise wiki vectors into the shared v1 contract. Android imports and persists directly translatable cases; iOS persists directly translatable built-in `25519` and `448` cases. Fallback, hybrid, and asymmetric-prologue cases still require a future schema revision.
 
 Official wiki vectors can be converted into shared v1 fixtures from the Android module with:
 
@@ -71,8 +70,7 @@ bash ./scripts/convert-official-noise-vectors-ios.sh \
   /absolute/path/to/output-directory
 ```
 
-The iOS wrapper resolves repo-relative input and output paths before invoking `swift run NoiseVectorConverterCLI`.
-Representative official `448` wiki vectors now also convert successfully on iOS through the built-in X448 adapter path.
+The iOS wrapper resolves repo-relative input and output paths before invoking `swift run NoiseVectorConverterCLI`, and representative official `448` and `BLAKE2s` inputs now convert successfully through the built-in adapter path.
 
 Cross-platform parity check for converted official vectors:
 
@@ -80,7 +78,7 @@ Cross-platform parity check for converted official vectors:
 bash ./scripts/verify-official-vector-conversion-parity.sh
 ```
 
-The repository currently ships representative official-format samples for `NN`, `NN 448`, `NNpsk0`, and `XXpsk2` under `scripts/testdata/` and checks Android/iOS shared-fixture parity for all four.
+The repository ships representative official-format samples for `NN`, `NN 448`, `NN BLAKE2s`, `NNpsk0`, and `XXpsk2` under `scripts/testdata/`, and the parity script checks Android/iOS shared-fixture output for all five.
 
 ## GitHub releases
 

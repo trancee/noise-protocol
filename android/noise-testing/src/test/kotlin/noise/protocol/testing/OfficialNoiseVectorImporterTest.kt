@@ -36,6 +36,18 @@ class OfficialNoiseVectorImporterTest {
     }
 
       @Test
+      fun importsOfficialNoiseNnBlake2sVectorIntoEquivalentSharedArtifacts() {
+        val fixture = harness.loadFixture(sharedFixturePath("noise-nn-25519-chachapoly-blake2s.json"))
+
+        val imported = importer.importVector(
+          OFFICIAL_NN_BLAKE2S_VECTOR_DOCUMENT,
+          index = 0
+        )
+
+        assertEquivalentFixtureArtifacts(expected = fixture, actual = imported)
+      }
+
+      @Test
       fun importsOfficialNoiseNnpsk0VectorIntoEquivalentSharedArtifacts() {
         val fixture = harness.loadFixture(sharedFixturePath("noise-nnpsk0-25519-chachapoly-sha256.json"))
 
@@ -407,6 +419,33 @@ class OfficialNoiseVectorImporterTest {
                 {
                   "payload": "776f726c64",
                   "ciphertext": "dc2cca31e8e43bbd91dff7e475cca3347eb478107d5bd765aba4ae4a30c35d448aa2198ed1ac9d712e7cfb5f3cc5e3202652d8e6d8"
+                }
+              ]
+            }
+          ]
+        }
+        """
+
+        const val OFFICIAL_NN_BLAKE2S_VECTOR_DOCUMENT = """
+        {
+          "vectors": [
+            {
+              "protocol_name": "Noise_NN_25519_ChaChaPoly_BLAKE2s",
+              "init_prologue": "70726f6c6f6775652d6e6f6973652d6e6e2d32353531392d636861636861706f6c792d626c616b653273",
+              "init_static": "086fc4277975bbd4947e22475ab5513ff54cb2f3bf89bb313f60f7c7a286607b",
+              "init_ephemeral": "90cbaef220ceb7df1d5e26cee5b8c0163768e11d51cdfcf86377d1c7c7045463",
+              "resp_prologue": "70726f6c6f6775652d6e6f6973652d6e6e2d32353531392d636861636861706f6c792d626c616b653273",
+              "resp_static": "3078ec6ed96923e57ef5f48865b18bd790d460150cfe790762f5bcd2f59d0250",
+              "resp_ephemeral": "68ee4293572b7c17711e379a37671f77f8e7e054eb67a30b728d7df7ee159f54",
+              "handshake_hash": "6a5002fb7157c5aa50160cefe7cd4438de01533a6de62fed6cff4a8c98ac278e",
+              "messages": [
+                {
+                  "payload": "7061796c6f61642d302d6e6f6973652d6e6e2d32353531392d636861636861706f6c792d626c616b653273",
+                  "ciphertext": "ec2b8b7c5aac02bfccfd673f042cdceab6227fd643d9e841d1ed1a80d1f5737d7061796c6f61642d302d6e6f6973652d6e6e2d32353531392d636861636861706f6c792d626c616b653273"
+                },
+                {
+                  "payload": "7061796c6f61642d312d6e6f6973652d6e6e2d32353531392d636861636861706f6c792d626c616b653273",
+                  "ciphertext": "24a44fe4dd1214fc51fec35b2235a36e4b1148bd6e8eee220d43765ebada7e555e71b097555814693f1a231f25acad2d26c093e05b78ddd2ff42713974c1cd058e4c59049decf9887bee1b5c71f3846911beae29050a14d4187c04"
                 }
               ]
             }

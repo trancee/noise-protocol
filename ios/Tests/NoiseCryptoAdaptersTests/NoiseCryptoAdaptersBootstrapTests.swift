@@ -51,6 +51,8 @@ func hkdfDeterministicOutputCountAndSize() {
     let adapters: [any NoiseHashAdapter] = [
         SHA256HashAdapter(),
         SHA512HashAdapter(),
+        Blake2sHashAdapter(),
+        Blake2bHashAdapter(),
     ]
 
     for adapter in adapters {
@@ -80,6 +82,8 @@ func hkdfInvalidOutputCountReturnsEmpty() {
     let adapters: [any NoiseHashAdapter] = [
         SHA256HashAdapter(),
         SHA512HashAdapter(),
+        Blake2sHashAdapter(),
+        Blake2bHashAdapter(),
     ]
 
     for adapter in adapters {
@@ -135,6 +139,8 @@ func registryAndFactoryWiring() async throws {
     #expect(snapshot.ciphers.contains("AESGCM"))
     #expect(snapshot.hashes.contains("SHA256"))
     #expect(snapshot.hashes.contains("SHA512"))
+    #expect(snapshot.hashes.contains("BLAKE2s"))
+    #expect(snapshot.hashes.contains("BLAKE2b"))
 
     let factory = NoiseCryptoAdapterFactory(registry: registry)
     let suites = [
@@ -155,6 +161,12 @@ func registryAndFactoryWiring() async throws {
             diffieHellman: "448",
             cipher: "ChaChaPoly",
             hash: "SHA256"
+        ),
+        NoiseCryptoSuiteDescriptor(
+            protocolName: .bootstrapDefault,
+            diffieHellman: "448",
+            cipher: "AESGCM",
+            hash: "BLAKE2b"
         ),
     ]
 
@@ -208,4 +220,6 @@ func builtInRegistryIsSharedAcrossFactories() async {
     #expect(snapshot.ciphers.contains("AESGCM"))
     #expect(snapshot.hashes.contains("SHA256"))
     #expect(snapshot.hashes.contains("SHA512"))
+    #expect(snapshot.hashes.contains("BLAKE2s"))
+    #expect(snapshot.hashes.contains("BLAKE2b"))
 }

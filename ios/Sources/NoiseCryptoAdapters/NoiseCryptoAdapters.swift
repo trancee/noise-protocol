@@ -477,6 +477,8 @@ public actor NoiseCryptoAdapterRegistry {
     private static let builtInHashAdapters: [any NoiseHashAdapter] = [
         SHA256HashAdapter(),
         SHA512HashAdapter(),
+        Blake2sHashAdapter(),
+        Blake2bHashAdapter(),
     ]
 
     private static let sharedBuiltInRegistry = NoiseCryptoAdapterRegistry(registeringBuiltIns: true)

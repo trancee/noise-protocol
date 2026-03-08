@@ -4,15 +4,15 @@ version: 1.0
 date_created: 2026-03-08
 last_updated: 2026-03-08
 owner: GitHub Copilot
-status: 'In progress'
+status: 'Completed'
 tags: [feature, ios, crypto, x448, noise, interoperability]
 ---
 
 # Introduction
 
-![Status: In progress](https://img.shields.io/badge/status-In_progress-yellow)
+![Status: Completed](https://img.shields.io/badge/status-Completed-brightgreen)
 
-This plan defines the work required to add native iOS X448 support to the Noise crypto adapter layer, the shared-fixture harness, and the official wiki vector conversion flow. The current iOS implementation supports `25519` only. Android already includes an in-repository X448 Montgomery ladder implementation, so this plan treats Android behavior as the internal parity reference.
+This plan records the work completed to add native iOS X448 support to the Noise crypto adapter layer, the shared-fixture harness, and the official wiki vector conversion flow. iOS now supports both `25519` and `448`. Android already included an in-repository X448 Montgomery ladder implementation, and that behavior served as the internal parity reference during rollout.
 
 Phase 1 decision update:
 - Prefer a pinned pure-Swift bigint dependency via `attaswift/BigInt` for the first implementation pass.
@@ -37,7 +37,7 @@ Phase 1 decision update:
 
 ### Implementation Phase 1
 
-- **GOAL-001**: Select and pin the iOS X448 arithmetic strategy.
+- **GOAL-001**: Select and pin the iOS X448 arithmetic strategy. Completed.
 
 | Task | Description | Completed | Date |
 |------|-------------|-----------|------|
@@ -47,7 +47,7 @@ Phase 1 decision update:
 
 ### Implementation Phase 2
 
-- **GOAL-002**: Implement and register a native iOS X448 adapter.
+- **GOAL-002**: Implement and register a native iOS X448 adapter. Completed.
 
 | Task | Description | Completed | Date |
 |------|-------------|-----------|------|
@@ -57,7 +57,7 @@ Phase 1 decision update:
 
 ### Implementation Phase 3
 
-- **GOAL-003**: Extend iOS fixture and official-vector flows to positive `448` support.
+- **GOAL-003**: Extend iOS fixture and official-vector flows to positive `448` support. Completed.
 
 | Task | Description | Completed | Date |
 |------|-------------|-----------|------|
@@ -67,7 +67,7 @@ Phase 1 decision update:
 
 ### Implementation Phase 4
 
-- **GOAL-004**: Add parity, regression, and interop verification for iOS X448.
+- **GOAL-004**: Add parity, regression, and interop verification for iOS X448. Completed.
 
 | Task | Description | Completed | Date |
 |------|-------------|-----------|------|
