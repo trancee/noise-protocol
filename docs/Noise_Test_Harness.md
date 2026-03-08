@@ -249,9 +249,13 @@ The test harness does NOT attempt to:
 ## 14. iOS Harness Integration
 
 - `NoiseVectorFixtureLoader` loads shared fixtures from `test-vectors/fixtures/v1/` and decodes the v1 contract.
+- `NoiseVectorFixtureRepository` caches the decoded iOS fixture corpus and supports lookup by `vector_id` plus
+  filtering by pattern / DH / cipher / hash for repeated verification runs.
 - `NoiseVectorRunner.run(_:)` executes deterministic handshake orchestration using `NoiseCore` and crypto adapters selected from the fixture suite metadata.
 - `NoiseVectorRunner.verifyExpected(_:)` compares handshake messages, transcript hash, and split transport keys byte-for-byte against fixture expectations.
+- `NoiseVectorRunner.verifyExpected(repository:vectorID:)` resolves fixtures from the cached repository for repeated deterministic verification.
 - `NoiseVectorRunner.verifyNegativeCase(_:in:)` applies mutation hooks (tamper/order) and asserts failure codes from fixture negative-case metadata.
+- `NoiseVectorRunner.verifyNegativeCase(repository:vectorID:caseID:)` resolves both the fixture and negative-case from the cached repository.
 - `cd ios && swift test --filter NoiseCoreTests` runs deterministic benchmark-oriented core tests
   that cover handshake patterns `NN`, `NK`, `KK`, `IK`, `XX` and built-in iOS suites
   (`25519` + `ChaChaPoly`/`AESGCM` + `SHA256`/`SHA512`), reporting per-variation and aggregate

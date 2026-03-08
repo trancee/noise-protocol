@@ -32,6 +32,27 @@ func deterministicExecutionIsStableAcrossRuns() async throws {
     #expect(first.handshakeMessages.count == fixture.inputs.payloads.count)
 }
 
+@Test("Fixture repository caches corpus and supports indexed lookup")
+func fixtureRepositoryCachesCorpusAndSupportsIndexedLookup() async throws {
+    let repository = NoiseVectorFixtureRepository()
+
+    let firstCatalog = try await repository.catalog()
+    let secondCatalog = try await repository.catalog()
+
+    #expect(firstCatalog == secondCatalog)
+    #expect(try await repository.fixtures().count == 80)
+    #expect(try await repository.filter(pattern: .NN).count == 16)
+    #expect(
+        try await repository.filter(
+            pattern: .NN,
+            diffieHellman: .x25519,
+            cipher: .chaChaPoly,
+            hash: .sha256
+        ).count == 1
+    )
+    #expect(try await repository.fixture(vectorID: "noise-nn-placeholder").vectorID == "noise-nn-placeholder")
+}
+
 @Test("Negative-case hooks detect tamper and ordering failures")
 func negativeCaseHooksDetectFailures() async throws {
     let loader = NoiseVectorFixtureLoader()
@@ -43,6 +64,22 @@ func negativeCaseHooksDetectFailures() async throws {
         #expect(result.caseID == negativeCase.id)
         #expect(result.actualErrorCode == negativeCase.expectedError.code)
     }
+}
+
+@Test("Runner resolves deterministic and negative checks from cached repository")
+func runnerResolvesChecksFromCachedRepository() async throws {
+    let repository = NoiseVectorFixtureRepository()
+    let runner = NoiseVectorRunner()
+
+    let deterministic = try await runner.verifyExpected(repository: repository, vectorID: "noise-nn-placeholder")
+    #expect(deterministic.handshakeMessages.count == 2)
+
+    let negative = try await runner.verifyNegativeCase(
+        repository: repository,
+        vectorID: "noise-nn-placeholder",
+        caseID: "flip-tag-msg1"
+    )
+    #expect(negative.actualErrorCode == "decrypt_failed")
 }
 
 @Test("Fixture corpus covers full pattern and suite matrix")
@@ -81,10 +118,11 @@ func fixtureCorpusCoversFullPatternAndSuiteMatrix() throws {
 
 @Test("Deterministic execution validates all iOS-supported fixtures")
 func deterministicExecutionValidatesAllSupportedFixtures() async throws {
-    let fixtures = try NoiseVectorFixtureLoader().loadFixtures()
+    let fixtures = try await NoiseVectorFixtureRepository().filter(
+        diffieHellman: .x25519
+    )
         .filter {
-            $0.protocolInfo.suite.dh == .x25519 &&
-                ($0.protocolInfo.suite.hash == .sha256 || $0.protocolInfo.suite.hash == .sha512)
+            $0.protocolInfo.suite.hash == .sha256 || $0.protocolInfo.suite.hash == .sha512
         }
     #expect(fixtures.count == 20)
 

@@ -256,11 +256,7 @@ public struct NoiseVectorFixtureLoader: Sendable {
     }
 
     public func loadFixture(vectorID: String) throws -> NoiseVectorFixture {
-        let fixtures = try loadFixtures()
-        guard let fixture = fixtures.first(where: { $0.vectorID == vectorID }) else {
-            throw NoiseTestHarnessError.fixtureFileNotFound(vectorID)
-        }
-        return fixture
+        try NoiseVectorFixtureCatalog(fixtures: loadFixtures()).fixture(vectorID: vectorID)
     }
 
     public func loadFixtures() throws -> [NoiseVectorFixture] {
@@ -320,6 +316,28 @@ public actor NoiseVectorRunner {
 
     public func run(_ fixture: NoiseVectorFixture) async throws -> NoiseVectorExecutionResult {
         try await execute(fixture)
+    }
+
+    public func verifyExpected(
+        repository: NoiseVectorFixtureRepository,
+        vectorID: String
+    ) async throws -> NoiseVectorExecutionResult {
+        let fixture = try await repository.fixture(vectorID: vectorID)
+        return try await verifyExpected(fixture)
+    }
+
+    public func verifyNegativeCase(
+        repository: NoiseVectorFixtureRepository,
+        vectorID: String,
+        caseID: String
+    ) async throws -> NoiseVectorNegativeCaseResult {
+        let fixture = try await repository.fixture(vectorID: vectorID)
+        guard let negativeCase = fixture.negativeCases.first(where: { $0.id == caseID }) else {
+            throw NoiseTestHarnessError.invalidFixture(
+                "Negative case \(caseID) does not exist in fixture \(vectorID)."
+            )
+        }
+        return try await verifyNegativeCase(negativeCase, in: fixture)
     }
 
     public func execute(

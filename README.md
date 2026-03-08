@@ -257,6 +257,25 @@ let customProvider = try await factory.makeProvider(for: customSuite)
 
 Use `customSuite.protocolName` and `customProvider` when initializing both handshake sessions.
 
+### 5) Reuse the shared iOS vector harness efficiently
+
+When running repeated deterministic or negative-case checks from Swift, prefer the cached repository actor in
+`NoiseTestHarness` so the shared fixture corpus is decoded once and then reused by `vector_id`.
+
+```swift
+import NoiseTestHarness
+
+let repository = NoiseVectorFixtureRepository()
+let runner = NoiseVectorRunner()
+
+let deterministic = try await runner.verifyExpected(repository: repository, vectorID: "noise-nn-placeholder")
+let negative = try await runner.verifyNegativeCase(
+  repository: repository,
+  vectorID: "noise-nn-placeholder",
+  caseID: "flip-tag-msg1"
+)
+```
+
 ## Verify locally
 
 ```bash
