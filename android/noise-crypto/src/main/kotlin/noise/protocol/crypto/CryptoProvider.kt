@@ -60,32 +60,11 @@ open class CryptoProvider(
     )
 
     override fun createSuite(algorithms: NoiseCryptoAlgorithms): NoiseCryptoSuite {
-        val hash = when (algorithms.hash) {
-            NoiseHashAlgorithm.SHA256 -> Sha256HashAdapter()
-            NoiseHashAlgorithm.SHA512 -> Sha512HashAdapter()
-            NoiseHashAlgorithm.BLAKE2S -> Blake2sHashAdapter()
-            NoiseHashAlgorithm.BLAKE2B -> Blake2bHashAdapter()
-        }
-        val hkdf = when (algorithms.hash) {
-            NoiseHashAlgorithm.SHA256 -> HkdfSha256Adapter()
-            NoiseHashAlgorithm.SHA512 -> HkdfSha512Adapter()
-            NoiseHashAlgorithm.BLAKE2S -> HkdfBlake2sAdapter()
-            NoiseHashAlgorithm.BLAKE2B -> HkdfBlake2bAdapter()
-        }
-        val cipher = when (algorithms.aead) {
-            NoiseAeadAlgorithm.CHACHA20_POLY1305 -> ChaCha20Poly1305CipherAdapter()
-            NoiseAeadAlgorithm.AES_GCM -> AesGcmCipherAdapter()
-        }
-        val diffieHellman = when (algorithms.dh) {
-            NoiseDhAlgorithm.X25519 -> X25519DiffieHellmanAdapter()
-            NoiseDhAlgorithm.X448 -> X448DiffieHellmanAdapter()
-        }
-
         return DefaultNoiseCryptoSuite(
-            hash = hash,
-            keyDerivation = hkdf,
-            cipher = cipher,
-            diffieHellman = diffieHellman
+            hash = HASH_ADAPTERS.getValue(algorithms.hash),
+            keyDerivation = HKDF_ADAPTERS.getValue(algorithms.hash),
+            cipher = CIPHER_ADAPTERS.getValue(algorithms.aead),
+            diffieHellman = DIFFIE_HELLMAN_ADAPTERS.getValue(algorithms.dh)
         )
     }
 
@@ -95,6 +74,30 @@ open class CryptoProvider(
             dh = NoiseDhAlgorithm.X25519,
             aead = NoiseAeadAlgorithm.AES_GCM,
             hash = NoiseHashAlgorithm.SHA256
+        )
+
+        private val HASH_ADAPTERS: Map<NoiseHashAlgorithm, NoiseHashFunction> = mapOf(
+            NoiseHashAlgorithm.SHA256 to Sha256HashAdapter(),
+            NoiseHashAlgorithm.SHA512 to Sha512HashAdapter(),
+            NoiseHashAlgorithm.BLAKE2S to Blake2sHashAdapter(),
+            NoiseHashAlgorithm.BLAKE2B to Blake2bHashAdapter()
+        )
+
+        private val HKDF_ADAPTERS: Map<NoiseHashAlgorithm, NoiseKeyDerivationFunction> = mapOf(
+            NoiseHashAlgorithm.SHA256 to HkdfSha256Adapter(),
+            NoiseHashAlgorithm.SHA512 to HkdfSha512Adapter(),
+            NoiseHashAlgorithm.BLAKE2S to HkdfBlake2sAdapter(),
+            NoiseHashAlgorithm.BLAKE2B to HkdfBlake2bAdapter()
+        )
+
+        private val CIPHER_ADAPTERS: Map<NoiseAeadAlgorithm, NoiseCipherFunction> = mapOf(
+            NoiseAeadAlgorithm.CHACHA20_POLY1305 to ChaCha20Poly1305CipherAdapter(),
+            NoiseAeadAlgorithm.AES_GCM to AesGcmCipherAdapter()
+        )
+
+        private val DIFFIE_HELLMAN_ADAPTERS: Map<NoiseDhAlgorithm, NoiseDiffieHellmanFunction> = mapOf(
+            NoiseDhAlgorithm.X25519 to X25519DiffieHellmanAdapter(),
+            NoiseDhAlgorithm.X448 to X448DiffieHellmanAdapter()
         )
     }
 

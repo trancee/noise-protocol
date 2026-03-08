@@ -153,6 +153,23 @@ val customProtocolName = "Noise_XX_25519_ChaChaPoly_SHA512"
 
 Use `customSuite`, `customPattern`, and `customProtocolName` in `HandshakeState.initialize(...)` on both peers.
 
+### 5) Reuse the shared vector harness efficiently
+
+When running repeated deterministic checks against the shared repository fixtures, prefer the cached repository API from
+`noise-testing` so the JSON corpus is parsed once and then reused by `vector_id`.
+
+```kotlin
+import noise.protocol.testing.NoiseTestHarness
+
+val harness = NoiseTestHarness(provider)
+val fixtures = harness.loadFixtureRepository(Path.of("../test-vectors/fixtures/v1"))
+
+val deterministic = harness.runDeterministic(fixtures, "noise-nn-placeholder")
+val negative = harness.runNegativeCase(fixtures, "noise-nn-placeholder", "flip-tag-msg1")
+check(deterministic.passed)
+check(!negative.passed)
+```
+
 ## iOS usage (Swift)
 
 Requires Swift 6.0 or newer.

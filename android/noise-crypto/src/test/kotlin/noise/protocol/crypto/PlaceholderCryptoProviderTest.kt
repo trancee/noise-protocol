@@ -4,6 +4,7 @@ import noise.protocol.core.HandshakePattern
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -193,6 +194,19 @@ class CryptoProviderTest {
         val hkdf = suite.keyDerivation.hkdf("ck".encodeToByteArray(), "ikm".encodeToByteArray(), 2)
         assertEquals(2, hkdf.size)
         hkdf.forEach { output -> assertEquals(64, output.size) }
+    }
+
+    @Test
+    fun providerReusesStatelessAdaptersAcrossSuites() {
+        val provider = CryptoProvider()
+
+        val first = provider.createSuite(CryptoProvider.DEFAULT_ALGORITHMS)
+        val second = provider.createSuite(CryptoProvider.DEFAULT_ALGORITHMS)
+
+        assertSame(first.hash, second.hash)
+        assertSame(first.keyDerivation, second.keyDerivation)
+        assertSame(first.cipher, second.cipher)
+        assertSame(first.diffieHellman, second.diffieHellman)
     }
 
     private fun String.hexToBytes(): ByteArray {

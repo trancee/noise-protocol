@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.nio.file.Files
@@ -14,6 +15,7 @@ import java.nio.file.Path
 
 class NoiseTestHarnessTest {
     private val harness = NoiseTestHarness(CryptoProvider())
+    private val repository by lazy { harness.loadFixtureRepository(sharedFixtureDirectory()) }
 
     private data class CoverageKey(
         val pattern: HandshakePattern,
@@ -39,7 +41,7 @@ class NoiseTestHarnessTest {
 
     @Test
     fun deterministicRunMatchesFixtureExpectedArtifacts() {
-        val fixture = harness.loadFixture(sharedFixturePath("noise-nn-placeholder.json"))
+        val fixture = repository.requireById("noise-nn-placeholder")
 
         val result = harness.runDeterministic(fixture)
 
@@ -47,8 +49,28 @@ class NoiseTestHarnessTest {
     }
 
     @Test
+    fun fixtureRepositoryCachesCorpusAndIndexesByVectorId() {
+        val firstCatalog = repository.catalog()
+        val secondCatalog = repository.catalog()
+
+        assertSame(firstCatalog, secondCatalog)
+        assertEquals(80, repository.all().size)
+        assertEquals(16, repository.filter(pattern = HandshakePattern.NN).size)
+        assertEquals(
+            1,
+            repository.filter(
+                pattern = HandshakePattern.NN,
+                dh = VectorDhAlgorithm.DH_25519,
+                cipher = VectorCipherAlgorithm.CHACHA_POLY,
+                hash = VectorHashAlgorithm.SHA256
+            ).size
+        )
+        assertEquals("noise-nn-placeholder", repository.requireById("noise-nn-placeholder").vectorId)
+    }
+
+    @Test
     fun sharedFixtureCorpusCoversAllPatternAndSuiteCombinations() {
-        val fixtures = harness.loadFixtures(sharedFixtureDirectory())
+        val fixtures = repository.all()
 
         assertEquals(80, fixtures.size)
 
@@ -90,11 +112,21 @@ class NoiseTestHarnessTest {
 
     @Test
     fun deterministicRunMatchesExpectedArtifactsForAllSharedFixtures() {
-        val fixtures = harness.loadFixtures(sharedFixtureDirectory())
+        val fixtures = repository.all()
         fixtures.forEach { fixture ->
             val result = harness.runDeterministic(fixture)
             assertExpectedArtifacts(fixture, result)
         }
+    }
+
+    @Test
+    fun deterministicAndNegativeRunsCanResolveFixturesFromRepository() {
+        val deterministicResult = harness.runDeterministic(repository, "noise-nn-placeholder")
+        assertTrue(deterministicResult.passed)
+
+        val negativeResult = harness.runNegativeCase(repository, "noise-nn-placeholder", "flip-tag-msg1")
+        assertFalse(negativeResult.passed)
+        assertEquals("decrypt_failed", negativeResult.failure?.code)
     }
 
     private fun assertExpectedArtifacts(fixture: NoiseVectorFixture, result: HarnessRunResult) {
@@ -126,7 +158,7 @@ class NoiseTestHarnessTest {
 
     @Test
     fun negativeTagTamperAndReorderCasesFail() {
-        val fixture = harness.loadFixture(sharedFixturePath("noise-nn-placeholder.json"))
+        val fixture = repository.requireById("noise-nn-placeholder")
 
         val tagTamperResult = harness.runNegativeCase(fixture, "flip-tag-msg1")
         assertFalse(tagTamperResult.passed)

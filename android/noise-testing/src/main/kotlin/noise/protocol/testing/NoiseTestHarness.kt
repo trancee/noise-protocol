@@ -459,6 +459,21 @@ class NoiseTestHarness(
 
     fun loadFixtures(fixturesDirectory: Path): List<NoiseVectorFixture> = fixtureLoader.loadAll(fixturesDirectory)
 
+    fun loadFixtureRepository(fixturesDirectory: Path): NoiseVectorFixtureRepository {
+        return NoiseVectorFixtureRepository(
+            fixturesDirectory = fixturesDirectory,
+            loader = fixtureLoader
+        )
+    }
+
+    fun runDeterministic(
+        repository: NoiseVectorFixtureRepository,
+        vectorId: String,
+        hooks: HarnessRunHooks = HarnessRunHooks()
+    ): HarnessRunResult {
+        return runDeterministic(repository.requireById(vectorId), hooks)
+    }
+
     fun runDeterministic(
         vector: NoiseVectorFixture,
         hooks: HarnessRunHooks = HarnessRunHooks()
@@ -582,6 +597,14 @@ class NoiseTestHarness(
                 detail = "Negative case '$caseId' does not exist in fixture '${vector.vectorId}'."
             )
         return runNegativeCase(vector, negativeCase)
+    }
+
+    fun runNegativeCase(
+        repository: NoiseVectorFixtureRepository,
+        vectorId: String,
+        caseId: String
+    ): HarnessRunResult {
+        return runNegativeCase(repository.requireById(vectorId), caseId)
     }
 
     fun runNegativeCase(vector: NoiseVectorFixture, negativeCase: VectorNegativeCase): HarnessRunResult {

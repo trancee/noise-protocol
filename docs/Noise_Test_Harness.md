@@ -234,8 +234,12 @@ The test harness does NOT attempt to:
 
 - Android module: `android/noise-testing`
 - `NoiseVectorFixtureLoader` loads v1 fixtures directly from `test-vectors/fixtures/v1/`
+- `NoiseVectorFixtureRepository` caches a loaded fixture corpus, supports lookup by `vector_id`, and filters by
+  pattern / DH / cipher / hash so repeated deterministic runs do not re-parse the full corpus.
 - `NoiseTestHarness.runDeterministic(...)` coordinates deterministic `HandshakeState` execution with injected fixture key material
+- `NoiseTestHarness.runDeterministic(repository, vectorId, ...)` resolves vectors from a cached repository for repeated runs
 - `NoiseTestHarness.runNegativeCase(...)` applies fixture-driven mutation hooks (including tag tamper and handshake message-order mutations) and reports failures as harness results
+- `NoiseTestHarness.runNegativeCase(repository, vectorId, caseId)` resolves both the fixture and negative-case from a cached repository
 - `cd android && gradle --no-daemon :noise-core:test :noise-crypto:test --tests '*Benchmark*'`
   runs benchmark-oriented Android coverage (core handshake/transport and provider crypto variations)
   with correctness assertions
