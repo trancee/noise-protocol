@@ -219,6 +219,44 @@ class NoiseCoreStubTest {
         assertArrayEquals(requireNotNull(senderRx.keyMaterial()), requireNotNull(receiverRx.keyMaterial()))
     }
 
+    @Test
+    fun handshakeMessageEncodingRoundTripsAndEnforcesNoiseMessageLimit() {
+        val message = HandshakeMessage(
+            direction = MessageDirection.INITIATOR_TO_RESPONDER,
+            tokenValues = listOf(
+                HandshakeTokenValue(HandshakeToken.E, byteArrayOf(0x01, 0x02)),
+                HandshakeTokenValue(HandshakeToken.S, byteArrayOf(0x03, 0x04, 0x05))
+            ),
+            payload = "payload".encodeToByteArray()
+        )
+
+        val encoded = message.encoded()
+        val decoded = HandshakeMessage.decode(
+            direction = MessageDirection.INITIATOR_TO_RESPONDER,
+            expectedTokens = message.tokenValues.map { it.token },
+            encoded = encoded
+        )
+
+        assertEquals(message.direction, decoded.direction)
+        assertEquals(message.tokenValues.map { it.token }, decoded.tokenValues.map { it.token })
+        message.tokenValues.zip(decoded.tokenValues).forEach { (expected, actual) ->
+            assertArrayEquals(expected.data, actual.data)
+        }
+        assertArrayEquals(message.payload, decoded.payload)
+
+        val oversizedMessage = HandshakeMessage(
+            direction = MessageDirection.INITIATOR_TO_RESPONDER,
+            tokenValues = listOf(
+                HandshakeTokenValue(HandshakeToken.E, ByteArray(32_767))
+            ),
+            payload = ByteArray(32_766)
+        )
+
+        assertThrows(IllegalArgumentException::class.java) {
+            oversizedMessage.encoded()
+        }
+    }
+
     private class FakeNoiseCryptoSuite : NoiseCryptoSuite {
         override val hash: NoiseHashFunction = FakeHashFunction()
         override val keyDerivation: NoiseKeyDerivationFunction = FakeKeyDerivationFunction(hash)

@@ -200,6 +200,27 @@ func handshakeMessageEncodingRoundTrip() throws {
     #expect(decoded == message)
 }
 
+@Test("Handshake message encoding rejects frames above the Noise message limit")
+func handshakeMessageEncodingRejectsOversizedFrames() throws {
+    let oversized = NoiseHandshakeMessage(
+        keyPayloads: [Data(repeating: 0xAA, count: 32_767)],
+        payload: Data(repeating: 0xBB, count: 32_766)
+    )
+
+    do {
+        _ = try oversized.encoded()
+        Issue.record("Expected oversized message to be rejected.")
+    } catch let error as NoiseCoreError {
+        if case let .invalidMessage(detail) = error {
+            #expect(detail.contains("65"))
+        } else {
+            Issue.record("Unexpected NoiseCoreError: \(error)")
+        }
+    } catch {
+        Issue.record("Unexpected error type: \(error)")
+    }
+}
+
 @Test("Benchmark deterministic handshake throughput across patterns and built-in suites")
 func benchmarkDeterministicHandshakeThroughput() throws {
     let payloadByStep = [

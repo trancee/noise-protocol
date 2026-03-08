@@ -91,6 +91,7 @@ Rules:
 - Public keys sent verbatim
 - Ciphertext includes AEAD tag inline
 - No endianness assumptions
+- When host applications want framed message helpers, the Android and iOS core APIs expose a 16-bit big-endian `HandshakeMessage`/`NoiseHandshakeMessage` encoding that rejects frames above 65,535 bytes.
 
 ---
 

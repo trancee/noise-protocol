@@ -430,6 +430,8 @@ public enum NoiseCoreBootstrapError: Error, Sendable, Equatable {
 }
 
 public struct NoiseHandshakeMessage: Sendable, Equatable {
+    public static let maximumEncodedSize = Int(UInt16.max)
+
     public let keyPayloads: [Data]
     public let payload: Data
 
@@ -439,23 +441,13 @@ public struct NoiseHandshakeMessage: Sendable, Equatable {
     }
 
     public func encoded() throws -> Data {
-        guard keyPayloads.count <= Int(UInt16.max) else {
-            throw NoiseCoreError.invalidMessage("Too many key payloads.")
-        }
-        guard payload.count <= Int(UInt16.max) else {
-            throw NoiseCoreError.invalidMessage("Payload too large.")
-        }
+        try validateEncodedSize()
 
         var output = Data()
-        let keyPayloadBytes = keyPayloads.reduce(0) { partialResult, keyPayload in
-            partialResult + 2 + keyPayload.count
-        }
-        output.reserveCapacity(2 + keyPayloadBytes + 2 + payload.count)
+        let size = try encodedSize()
+        output.reserveCapacity(size)
         output.appendUInt16(UInt16(keyPayloads.count))
         for keyPayload in keyPayloads {
-            guard keyPayload.count <= Int(UInt16.max) else {
-                throw NoiseCoreError.invalidMessage("Key payload too large.")
-            }
             output.appendUInt16(UInt16(keyPayload.count))
             output.append(keyPayload)
         }
@@ -464,7 +456,41 @@ public struct NoiseHandshakeMessage: Sendable, Equatable {
         return output
     }
 
+    public func encodedSize() throws -> Int {
+        guard keyPayloads.count <= Int(UInt16.max) else {
+            throw NoiseCoreError.invalidMessage("Too many key payloads.")
+        }
+        guard payload.count <= Int(UInt16.max) else {
+            throw NoiseCoreError.invalidMessage("Payload too large.")
+        }
+
+        let keyPayloadBytes = try keyPayloads.reduce(into: 0) { partialResult, keyPayload in
+            guard keyPayload.count <= Int(UInt16.max) else {
+                throw NoiseCoreError.invalidMessage("Key payload too large.")
+            }
+            partialResult += 2 + keyPayload.count
+        }
+
+        let size = 2 + keyPayloadBytes + 2 + payload.count
+        guard size <= Self.maximumEncodedSize else {
+            throw NoiseCoreError.invalidMessage(
+                "Handshake message exceeds the Noise maximum message size of \(Self.maximumEncodedSize) bytes."
+            )
+        }
+        return size
+    }
+
+    public func validateEncodedSize() throws {
+        _ = try encodedSize()
+    }
+
     public init(encoded data: Data) throws {
+        guard data.count <= Self.maximumEncodedSize else {
+            throw NoiseCoreError.invalidMessage(
+                "Handshake message exceeds the Noise maximum message size of \(Self.maximumEncodedSize) bytes."
+            )
+        }
+
         var cursor = 0
         let keyPayloadCount = try Self.readUInt16(from: data, cursor: &cursor)
 
@@ -485,6 +511,7 @@ public struct NoiseHandshakeMessage: Sendable, Equatable {
 
         self.keyPayloads = keyPayloads
         self.payload = payload
+        try validateEncodedSize()
     }
 
     private static func readUInt16(from data: Data, cursor: inout Int) throws -> UInt16 {
@@ -580,10 +607,13 @@ public struct NoiseHandshakeState: Sendable {
             hash: crypto.hash
         )
         messageIndex += 1
-        return NoiseHandshakeMessage(keyPayloads: keyPayloads, payload: ciphertextPayload)
+        let message = NoiseHandshakeMessage(keyPayloads: keyPayloads, payload: ciphertextPayload)
+        try message.validateEncodedSize()
+        return message
     }
 
     public mutating func readMessage(_ message: NoiseHandshakeMessage, crypto: NoiseCryptoProvider) throws -> Data {
+        try message.validateEncodedSize()
         let messagePattern = try currentMessagePattern()
         let actualDirection = remoteDirection
         guard messagePattern.direction == actualDirection else {

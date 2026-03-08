@@ -544,7 +544,7 @@ class NoiseTestHarness(
             transcript += HarnessTranscriptMessage(
                 index = index,
                 sender = sender,
-                message = encodeMessage(mutatedMessage)
+                message = mutatedMessage.encoded()
             )
 
             if (!hooks.shouldDeliverMessage(context.copy(message = mutatedMessage))) {
@@ -751,38 +751,6 @@ class NoiseTestHarness(
                 messageIndex = messageIndex
             )
         )
-    }
-
-    private fun encodeMessage(message: HandshakeMessage): ByteArray {
-        require(message.tokenValues.size <= UShort.MAX_VALUE.toInt()) {
-            "Handshake message contains too many token payload segments."
-        }
-        require(message.payload.size <= UShort.MAX_VALUE.toInt()) {
-            "Handshake message payload exceeds UInt16 maximum."
-        }
-
-        val size = 2 + message.tokenValues.sumOf { 2 + it.data.size } + 2 + message.payload.size
-        val encoded = ByteArray(size)
-        var offset = 0
-        fun writeUInt16(value: Int) {
-            encoded[offset] = ((value ushr 8) and 0xFF).toByte()
-            encoded[offset + 1] = (value and 0xFF).toByte()
-            offset += 2
-        }
-
-        writeUInt16(message.tokenValues.size)
-        message.tokenValues.forEach { tokenValue ->
-            require(tokenValue.data.size <= UShort.MAX_VALUE.toInt()) {
-                "Handshake token payload exceeds UInt16 maximum."
-            }
-            writeUInt16(tokenValue.data.size)
-            tokenValue.data.copyInto(encoded, destinationOffset = offset)
-            offset += tokenValue.data.size
-        }
-        writeUInt16(message.payload.size)
-        message.payload.copyInto(encoded, destinationOffset = offset)
-
-        return encoded
     }
 
     private fun MessageDirection.toSender(): VectorSender {

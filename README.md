@@ -130,7 +130,16 @@ responder.readMessage(m3)
 check(initiator.isComplete() && responder.isComplete())
 
 val (tx, rx) = initiator.splitTransportStates()
+
+val frame = m3.encoded()
+val decoded = HandshakeMessage.decode(
+  direction = MessageDirection.INITIATOR_TO_RESPONDER,
+  expectedTokens = m3.tokenValues.map { it.token },
+  encoded = frame
+)
 ```
+
+`HandshakeMessage.encoded()` uses a 16-bit big-endian frame layout and rejects messages larger than 65,535 bytes, matching the Noise framework guidance for application-level framing.
 
 ### 4) Use a different crypto suite
 
@@ -239,6 +248,8 @@ _ = try await responderSession.readMessage(m3)
 
 let transport = try await initiatorSession.splitTransportStates()
 ```
+
+Swift `NoiseHandshakeMessage.encoded()` uses the same 16-bit big-endian frame layout and enforces the same 65,535-byte maximum frame size.
 
 ### 4) Use a different crypto suite
 
