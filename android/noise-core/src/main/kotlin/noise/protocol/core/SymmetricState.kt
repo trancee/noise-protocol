@@ -30,6 +30,15 @@ class SymmetricState(
         cipherState.initializeKey(outputs[1].copyOf(CIPHER_KEY_LENGTH))
     }
 
+    fun mixKeyAndHash(inputKeyMaterial: ByteArray) {
+        val outputs = keyDerivationFunction.hkdf(chainingKeyValue, inputKeyMaterial, outputs = 3)
+        require(outputs.size == 3) { "HKDF must return exactly 3 outputs for mixKeyAndHash." }
+
+        chainingKeyValue = outputs[0].copyOf()
+        mixHash(outputs[1])
+        cipherState.initializeKey(outputs[2].copyOf(CIPHER_KEY_LENGTH))
+    }
+
     fun encryptAndHash(plaintext: ByteArray): ByteArray {
         val ciphertext = cipherState.encryptWithAd(handshakeHashValue, plaintext)
         mixHash(ciphertext)

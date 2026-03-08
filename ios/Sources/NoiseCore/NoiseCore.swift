@@ -42,6 +42,49 @@ public struct NoiseProtocolDescriptor: Sendable, Hashable {
     public static let bootstrapDefault = NoiseProtocolDescriptor(
         rawValue: "Noise_XX_25519_AESGCM_SHA256"
     )
+
+    fileprivate var patternSegment: String? {
+        let parts = rawValue.split(separator: "_")
+        guard parts.count >= 2 else {
+            return nil
+        }
+        return String(parts[1])
+    }
+
+    fileprivate var basePatternName: String? {
+        guard let patternSegment else {
+            return nil
+        }
+        let prefix = patternSegment.prefix { character in
+            character.isUppercase
+        }
+        return prefix.isEmpty ? nil : String(prefix)
+    }
+
+    fileprivate func preSharedKeyPlacements(messageCount: Int) throws -> Set<Int> {
+        guard let patternSegment else {
+            return []
+        }
+        let expression = try NSRegularExpression(pattern: "psk(\\d+)")
+        let nsRange = NSRange(patternSegment.startIndex..<patternSegment.endIndex, in: patternSegment)
+        let placements: [Int] = expression.matches(in: patternSegment, range: nsRange).compactMap {
+            (match: NSTextCheckingResult) -> Int? in
+            guard let range = Range(match.range(at: 1), in: patternSegment) else {
+                return nil
+            }
+            return Int(patternSegment[range])
+        }
+
+        guard Set(placements).count == placements.count else {
+            throw NoiseCoreError.invalidMessage("Duplicate PSK modifiers are not allowed.")
+        }
+        guard placements.allSatisfy({ $0 >= 0 && $0 <= messageCount }) else {
+            throw NoiseCoreError.invalidMessage(
+                "PSK modifiers must reference positions between 0 and \(messageCount)."
+            )
+        }
+        return Set(placements)
+    }
 }
 
 public enum NoiseHandshakePatternName: String, Sendable, CaseIterable {
@@ -62,11 +105,10 @@ public enum NoiseHandshakePatternName: String, Sendable, CaseIterable {
     case xx = "XX"
 
     public init?(protocolDescriptor: NoiseProtocolDescriptor) {
-        let parts = protocolDescriptor.rawValue.split(separator: "_")
-        guard parts.count >= 2 else {
+        guard let basePatternName = protocolDescriptor.basePatternName else {
             return nil
         }
-        self.init(rawValue: String(parts[1]))
+        self.init(rawValue: basePatternName)
     }
 }
 
@@ -87,6 +129,7 @@ public enum NoiseMessageDirection: Sendable, Equatable {
 public enum NoisePatternToken: String, Sendable, Equatable, CaseIterable {
     case e
     case s
+    case psk
     case ee
     case es
     case se
@@ -499,6 +542,16 @@ public struct NoiseSymmetricState: Sendable, Equatable {
         cipherState.initializeKey(truncateCipherKey(outputs[1]))
     }
 
+    public mutating func mixKeyAndHash(_ inputKeyMaterial: Data, hash: any NoiseHashAlgorithm) throws {
+        let outputs = hash.hkdf(chainingKey: chainingKey, inputKeyMaterial: inputKeyMaterial, outputCount: 3)
+        guard outputs.count == 3 else {
+            throw NoiseCoreError.invalidHKDFOutput(expected: 3, actual: outputs.count)
+        }
+        chainingKey = outputs[0]
+        mixHash(outputs[1], hash: hash)
+        cipherState.initializeKey(truncateCipherKey(outputs[2]))
+    }
+
     public mutating func encryptAndHash(
         _ plaintext: Data,
         cipher: any NoiseCipherAlgorithm,
@@ -540,6 +593,7 @@ public struct NoiseHandshakeConfiguration: Sendable, Equatable {
     public var isInitiator: Bool
     public var handshakePattern: NoiseHandshakePatternName
     public var prologue: Data
+    public var preSharedKeys: [Int: Data]
     public var localStaticKey: NoiseDHKeyPair?
     public var localEphemeralKey: NoiseDHKeyPair?
     public var remoteStaticKey: Data?
@@ -550,6 +604,7 @@ public struct NoiseHandshakeConfiguration: Sendable, Equatable {
         isInitiator: Bool,
         handshakePattern: NoiseHandshakePatternName? = nil,
         prologue: Data = Data(),
+        preSharedKeys: [Int: Data] = [:],
         localStaticKey: NoiseDHKeyPair? = nil,
         localEphemeralKey: NoiseDHKeyPair? = nil,
         remoteStaticKey: Data? = nil,
@@ -559,6 +614,7 @@ public struct NoiseHandshakeConfiguration: Sendable, Equatable {
         self.isInitiator = isInitiator
         self.handshakePattern = handshakePattern ?? NoiseHandshakePatternName(protocolDescriptor: protocolName) ?? .xx
         self.prologue = prologue
+        self.preSharedKeys = preSharedKeys
         self.localStaticKey = localStaticKey
         self.localEphemeralKey = localEphemeralKey
         self.remoteStaticKey = remoteStaticKey
@@ -685,6 +741,7 @@ private extension Data {
 public struct NoiseHandshakeState: Sendable {
     public let configuration: NoiseHandshakeConfiguration
     public let pattern: NoiseHandshakePatternDefinition
+    private let pskPlacements: Set<Int>
     public private(set) var symmetricState: NoiseSymmetricState
     public private(set) var messageIndex: Int
     public private(set) var localStaticKey: NoiseDHKeyPair?
@@ -695,12 +752,27 @@ public struct NoiseHandshakeState: Sendable {
     public init(configuration: NoiseHandshakeConfiguration, hash: any NoiseHashAlgorithm) throws {
         self.configuration = configuration
         pattern = NoiseHandshakePatterns.pattern(named: configuration.handshakePattern)
+        pskPlacements = try configuration.protocolName.preSharedKeyPlacements(messageCount: pattern.messages.count)
         symmetricState = NoiseSymmetricState(protocolName: configuration.protocolName, hash: hash)
         messageIndex = 0
         localStaticKey = configuration.localStaticKey
         localEphemeralKey = configuration.localEphemeralKey
         remoteStaticKey = configuration.remoteStaticKey
         remoteEphemeralKey = configuration.remoteEphemeralKey
+
+        let missingPreSharedKeys = pskPlacements.subtracting(configuration.preSharedKeys.keys)
+        guard missingPreSharedKeys.isEmpty else {
+            throw NoiseCoreError.missingKeyMaterial(
+                "pre-shared keys for \(missingPreSharedKeys.sorted().map { "psk\($0)" }.joined(separator: ", "))"
+            )
+        }
+
+        let unexpectedPreSharedKeys = Set(configuration.preSharedKeys.keys).subtracting(pskPlacements)
+        guard unexpectedPreSharedKeys.isEmpty else {
+            throw NoiseCoreError.invalidMessage(
+                "Unexpected pre-shared keys for \(unexpectedPreSharedKeys.sorted().map { "psk\($0)" }.joined(separator: ", "))."
+            )
+        }
 
         if !configuration.prologue.isEmpty {
             symmetricState.mixHash(configuration.prologue, hash: hash)
@@ -731,7 +803,8 @@ public struct NoiseHandshakeState: Sendable {
         }
 
         var keyPayloads: [Data] = []
-        for token in messagePattern.tokens {
+        let tokens = effectiveTokens(for: messagePattern, messageIndex: messageIndex)
+        for (tokenIndex, token) in tokens.enumerated() {
             switch token {
             case .e:
                 let ephemeral = try ensureLocalEphemeral(using: crypto.diffieHellman)
@@ -747,6 +820,8 @@ public struct NoiseHandshakeState: Sendable {
                     hash: crypto.hash
                 )
                 keyPayloads.append(encodedStatic)
+            case .psk:
+                try symmetricState.mixKeyAndHash(preSharedKey(for: pskPlacement(for: tokenIndex)), hash: crypto.hash)
             case .ee, .es, .se, .ss:
                 let sharedSecret = try dh(for: token, using: crypto.diffieHellman)
                 try symmetricState.mixKey(sharedSecret, hash: crypto.hash)
@@ -773,7 +848,8 @@ public struct NoiseHandshakeState: Sendable {
         }
 
         var keyPayloadIndex = 0
-        for token in messagePattern.tokens {
+        let tokens = effectiveTokens(for: messagePattern, messageIndex: messageIndex)
+        for (tokenIndex, token) in tokens.enumerated() {
             switch token {
             case .e:
                 let remoteEphemeral = try consumeKeyPayload(
@@ -795,6 +871,8 @@ public struct NoiseHandshakeState: Sendable {
                     hash: crypto.hash
                 )
                 remoteStaticKey = decryptedStatic
+            case .psk:
+                try symmetricState.mixKeyAndHash(preSharedKey(for: pskPlacement(for: tokenIndex)), hash: crypto.hash)
             case .ee, .es, .se, .ss:
                 let sharedSecret = try dh(for: token, using: crypto.diffieHellman)
                 try symmetricState.mixKey(sharedSecret, hash: crypto.hash)
@@ -843,6 +921,36 @@ public struct NoiseHandshakeState: Sendable {
             throw NoiseCoreError.handshakeComplete
         }
         return pattern.messages[messageIndex]
+    }
+
+    private func effectiveTokens(
+        for messagePattern: NoisePatternMessage,
+        messageIndex: Int
+    ) -> [NoisePatternToken] {
+        var tokens: [NoisePatternToken] = []
+        tokens.reserveCapacity(messagePattern.tokens.count + 2)
+        if messageIndex == 0, pskPlacements.contains(0) {
+            tokens.append(.psk)
+        }
+        tokens.append(contentsOf: messagePattern.tokens)
+        if pskPlacements.contains(messageIndex + 1) {
+            tokens.append(.psk)
+        }
+        return tokens
+    }
+
+    private func pskPlacement(for tokenIndex: Int) -> Int {
+        if messageIndex == 0, tokenIndex == 0, pskPlacements.contains(0) {
+            return 0
+        }
+        return messageIndex + 1
+    }
+
+    private func preSharedKey(for placement: Int) throws -> Data {
+        guard let preSharedKey = configuration.preSharedKeys[placement] else {
+            throw NoiseCoreError.missingKeyMaterial("pre-shared key for psk\(placement)")
+        }
+        return preSharedKey
     }
 
     private mutating func ensureLocalEphemeral(

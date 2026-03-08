@@ -324,6 +324,32 @@ class NoiseCoreStubTest {
     }
 
     @Test
+    fun symmetricStateMixKeyAndHashIsDeterministic() {
+        val sender = SymmetricState(
+            hashFunction = fakeCryptoSuite.hash,
+            keyDerivationFunction = fakeCryptoSuite.keyDerivation,
+            cipherFunction = fakeCryptoSuite.cipher,
+            protocolName = "Noise_XXpsk2_25519_AESGCM_SHA256"
+        )
+        val receiver = SymmetricState(
+            hashFunction = fakeCryptoSuite.hash,
+            keyDerivationFunction = fakeCryptoSuite.keyDerivation,
+            cipherFunction = fakeCryptoSuite.cipher,
+            protocolName = "Noise_XXpsk2_25519_AESGCM_SHA256"
+        )
+
+        sender.mixKeyAndHash(byteArrayOf(9, 8, 7, 6))
+        receiver.mixKeyAndHash(byteArrayOf(9, 8, 7, 6))
+
+        val ciphertext = sender.encryptAndHash("payload".encodeToByteArray())
+        val plaintext = receiver.decryptAndHash(ciphertext)
+
+        assertArrayEquals("payload".encodeToByteArray(), plaintext)
+        assertArrayEquals(sender.handshakeHash, receiver.handshakeHash)
+        assertArrayEquals(sender.chainingKey, receiver.chainingKey)
+    }
+
+    @Test
     fun handshakeMessageEncodingRoundTripsAndEnforcesNoiseMessageLimit() {
         val message = HandshakeMessage(
             direction = MessageDirection.INITIATOR_TO_RESPONDER,
@@ -404,6 +430,68 @@ class NoiseCoreStubTest {
         assertEquals(null, responder.expectedDirection())
         assertTrue(initiator.isComplete())
         assertTrue(responder.isComplete())
+    }
+
+    @Test
+    fun handshakeStateSupportsPskModifiersFromProtocolName() {
+        val protocolName = "Noise_XXpsk0+psk2_25519_AESGCM_SHA256"
+        val preSharedKeys = mapOf(
+            0 to byteArrayOf(1, 3, 5, 7),
+            2 to byteArrayOf(2, 4, 6, 8)
+        )
+
+        val initiator = HandshakeState.initialize(
+            pattern = HandshakePattern.XX,
+            role = HandshakeRole.INITIATOR,
+            cryptoSuite = fakeCryptoSuite,
+            protocolName = protocolName,
+            preSharedKeys = preSharedKeys,
+            localStatic = keyPair(10),
+            ephemeralKeyGenerator = { keyPair(11) }
+        )
+        val responder = HandshakeState.initialize(
+            pattern = HandshakePattern.XX,
+            role = HandshakeRole.RESPONDER,
+            cryptoSuite = fakeCryptoSuite,
+            protocolName = protocolName,
+            preSharedKeys = preSharedKeys,
+            localStatic = keyPair(20),
+            ephemeralKeyGenerator = { keyPair(21) }
+        )
+
+        assertEquals(listOf(HandshakeToken.E), initiator.expectedTokenPayloads())
+        val message1 = initiator.writeMessage("one".encodeToByteArray())
+        assertEquals(listOf(HandshakeToken.E), message1.tokenValues.map { it.token })
+        assertArrayEquals("one".encodeToByteArray(), responder.readMessage(message1))
+
+        assertEquals(listOf(HandshakeToken.E, HandshakeToken.S), responder.expectedTokenPayloads())
+        val message2 = responder.writeMessage("two".encodeToByteArray())
+        assertEquals(listOf(HandshakeToken.E, HandshakeToken.S), message2.tokenValues.map { it.token })
+        assertArrayEquals("two".encodeToByteArray(), initiator.readMessage(message2))
+
+        assertEquals(listOf(HandshakeToken.S), initiator.expectedTokenPayloads())
+        val message3 = initiator.writeMessage("three".encodeToByteArray())
+        assertEquals(listOf(HandshakeToken.S), message3.tokenValues.map { it.token })
+        assertArrayEquals("three".encodeToByteArray(), responder.readMessage(message3))
+
+        assertTrue(initiator.isComplete())
+        assertTrue(responder.isComplete())
+        assertArrayEquals(initiator.handshakeHash(), responder.handshakeHash())
+    }
+
+    @Test
+    fun handshakeStateRejectsMissingPskMaterial() {
+        val error = assertThrows(IllegalArgumentException::class.java) {
+            HandshakeState.initialize(
+                pattern = HandshakePattern.NN,
+                role = HandshakeRole.INITIATOR,
+                cryptoSuite = fakeCryptoSuite,
+                protocolName = "Noise_NNpsk0_25519_AESGCM_SHA256",
+                ephemeralKeyGenerator = { keyPair(1) }
+            )
+        }
+
+        assertEquals("Missing pre-shared keys for psk0.", error.message)
     }
 
     private class FakeNoiseCryptoSuite : NoiseCryptoSuite {

@@ -17,6 +17,7 @@ Tracked upstream baseline:
 Current scope:
 - One-way handshake patterns: `N`, `K`, `X`
 - Fundamental interactive handshake patterns: `NN`, `NK`, `NX`, `XN`, `XK`, `XX`, `KN`, `KK`, `KX`, `IN`, `IK`, `IX`
+- PSK modifiers derived from the protocol name for the current core pattern set, with caller-supplied `pskN` material
 - Core state machines: `CipherState`, `SymmetricState`, `HandshakeState`
 - Pluggable crypto adapters
 - Shared test-vector harness and Android/iOS interop checks for the current shared vector subset: `NN`, `NK`, `KK`, `IK`, `XX`

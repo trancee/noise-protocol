@@ -23,6 +23,9 @@ This document defines **protocol logic only**. It must not reference any concret
 - Noise_IX
 - Noise_XX
 
+Supported modifiers for the current core surface:
+- `psk0` through `pskN`, derived from the protocol name for any currently supported base pattern, with caller-supplied pre-shared key material for each referenced modifier
+
 Handshake pattern tables (strictly ordered):
 - N: `<- s` (pre-message), `-> e, es`
 - K: `-> s`, `<- s` (pre-messages), `-> e, es, ss`
@@ -78,6 +81,7 @@ Initialization:
 Operations:
 - mix_hash(data)
 - mix_key(ikm)
+- mix_key_and_hash(psk)
 - encrypt_and_hash(plaintext)
 - decrypt_and_hash(ciphertext)
 - split() -> (tx, rx)
@@ -95,6 +99,7 @@ Fields:
 Rules:
 - Driven entirely by handshake pattern table
 - No branching on initiator/responder except message direction
+- `psk0` is processed at the start of message 1; `pskN` is processed at the end of message `N`
 - Payload encrypted after all pattern tokens
 - Errors abort handshake immediately
 - The current handshake hash should be available to callers for channel binding during or after the handshake.

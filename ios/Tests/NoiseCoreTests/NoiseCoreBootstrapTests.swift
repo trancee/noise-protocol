@@ -25,6 +25,12 @@ func bootstrapLibraryVersion() throws {
     #expect(NoiseCoreVersion.libraryVersion == canonicalVersion)
 }
 
+@Test("Protocol descriptors parse base patterns when PSK modifiers are present")
+func protocolDescriptorParsesPskModifiers() {
+    let descriptor = NoiseProtocolDescriptor(rawValue: "Noise_XXpsk0+psk2_25519_AESGCM_SHA256")
+    #expect(NoiseHandshakePatternName(protocolDescriptor: descriptor) == .xx)
+}
+
 @Test("Pattern table ordering is correct for all currently supported handshake patterns")
 func handshakePatternTableOrdering() {
     let expected: [(NoiseHandshakePatternName, [NoisePatternMessage], [NoisePatternMessage])] = [
@@ -307,6 +313,32 @@ func symmetricStateDeterministicWithFakeCrypto() throws {
     #expect(senderSplit == receiverSplit)
 }
 
+@Test("SymmetricState mixKeyAndHash is deterministic with fake crypto")
+func symmetricStateMixKeyAndHashDeterministic() throws {
+    let hash = FakeHashAlgorithm()
+    let cipher = FakeCipherAlgorithm()
+
+    var sender = NoiseSymmetricState(
+        protocolName: NoiseProtocolDescriptor(rawValue: "Noise_XXpsk2_25519_AESGCM_SHA256"),
+        hash: hash
+    )
+    var receiver = NoiseSymmetricState(
+        protocolName: NoiseProtocolDescriptor(rawValue: "Noise_XXpsk2_25519_AESGCM_SHA256"),
+        hash: hash
+    )
+
+    try sender.mixKeyAndHash(Data([0x09, 0x08, 0x07, 0x06]), hash: hash)
+    try receiver.mixKeyAndHash(Data([0x09, 0x08, 0x07, 0x06]), hash: hash)
+
+    let plaintext = Data("deterministic-payload".utf8)
+    let ciphertext = try sender.encryptAndHash(plaintext, cipher: cipher, hash: hash)
+    let decrypted = try receiver.decryptAndHash(ciphertext, cipher: cipher, hash: hash)
+
+    #expect(decrypted == plaintext)
+    #expect(sender.handshakeHash == receiver.handshakeHash)
+    #expect(sender.chainingKey == receiver.chainingKey)
+}
+
 @Test("Handshake message encoding round-trips key payloads and body")
 func handshakeMessageEncodingRoundTrip() throws {
     let message = NoiseHandshakeMessage(
@@ -417,6 +449,85 @@ func handshakeSessionReportsDirectionAndCompletion() async throws {
     #expect(try await responder.expectedDirection() == nil)
     #expect(try await initiator.isComplete())
     #expect(try await responder.isComplete())
+}
+
+@Test("Handshake state supports PSK modifiers derived from protocol name")
+func handshakeStateSupportsPskModifiersFromProtocolName() throws {
+    let crypto = NoiseCryptoProvider(
+        diffieHellman: FakeDiffieHellmanAlgorithm(),
+        cipher: FakeCipherAlgorithm(),
+        hash: FakeHashAlgorithm()
+    )
+    let protocolName = NoiseProtocolDescriptor(rawValue: "Noise_XXpsk0+psk2_25519_AESGCM_SHA256")
+    let preSharedKeys = [
+        0: Data([0x01, 0x03, 0x05, 0x07]),
+        2: Data([0x02, 0x04, 0x06, 0x08]),
+    ]
+
+    var initiator = try NoiseHandshakeState(
+        configuration: NoiseHandshakeConfiguration(
+            protocolName: protocolName,
+            isInitiator: true,
+            handshakePattern: .xx,
+            preSharedKeys: preSharedKeys,
+            localStaticKey: NoiseDHKeyPair(privateKey: Data([0xA1]), publicKey: Data([0xB1])),
+            localEphemeralKey: NoiseDHKeyPair(privateKey: Data([0xA2]), publicKey: Data([0xB2]))
+        ),
+        hash: crypto.hash
+    )
+    var responder = try NoiseHandshakeState(
+        configuration: NoiseHandshakeConfiguration(
+            protocolName: protocolName,
+            isInitiator: false,
+            handshakePattern: .xx,
+            preSharedKeys: preSharedKeys,
+            localStaticKey: NoiseDHKeyPair(privateKey: Data([0xC1]), publicKey: Data([0xD1])),
+            localEphemeralKey: NoiseDHKeyPair(privateKey: Data([0xC2]), publicKey: Data([0xD2]))
+        ),
+        hash: crypto.hash
+    )
+
+    let message1 = try initiator.writeMessage(payload: Data("m1".utf8), crypto: crypto)
+    #expect(message1.keyPayloads.count == 1)
+    #expect(try responder.readMessage(message1, crypto: crypto) == Data("m1".utf8))
+
+    let message2 = try responder.writeMessage(payload: Data("m2".utf8), crypto: crypto)
+    #expect(message2.keyPayloads.count == 2)
+    #expect(try initiator.readMessage(message2, crypto: crypto) == Data("m2".utf8))
+
+    let message3 = try initiator.writeMessage(payload: Data("m3".utf8), crypto: crypto)
+    #expect(message3.keyPayloads.count == 1)
+    #expect(try responder.readMessage(message3, crypto: crypto) == Data("m3".utf8))
+
+    #expect(initiator.isComplete)
+    #expect(responder.isComplete)
+    #expect(initiator.handshakeHash == responder.handshakeHash)
+}
+
+@Test("Handshake state rejects missing PSK material for protocol modifiers")
+func handshakeStateRejectsMissingPskMaterial() {
+    let hash = FakeHashAlgorithm()
+
+    do {
+        _ = try NoiseHandshakeState(
+            configuration: NoiseHandshakeConfiguration(
+                protocolName: NoiseProtocolDescriptor(rawValue: "Noise_NNpsk0_25519_AESGCM_SHA256"),
+                isInitiator: true,
+                handshakePattern: .nn,
+                localEphemeralKey: NoiseDHKeyPair(privateKey: Data([0xA2]), publicKey: Data([0xB2]))
+            ),
+            hash: hash
+        )
+        Issue.record("Expected missing PSK material to be rejected.")
+    } catch let error as NoiseCoreError {
+        if case let .missingKeyMaterial(detail) = error {
+            #expect(detail.contains("psk0"))
+        } else {
+            Issue.record("Unexpected NoiseCoreError: \(error)")
+        }
+    } catch {
+        Issue.record("Unexpected error type: \(error)")
+    }
 }
 
 @Test("Benchmark deterministic handshake throughput across patterns and built-in suites")

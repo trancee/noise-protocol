@@ -20,6 +20,7 @@ enum class MessageDirection {
 enum class HandshakeToken {
     E,
     S,
+    PSK,
     EE,
     ES,
     SE,
