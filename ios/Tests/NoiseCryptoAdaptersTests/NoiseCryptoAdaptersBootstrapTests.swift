@@ -101,12 +101,36 @@ func diffieHellmanSharedSecretSymmetry() throws {
     #expect(aliceSecret.count == 32)
 }
 
+@Test("X448 DH shared secret is symmetric")
+func x448DiffieHellmanSharedSecretSymmetry() throws {
+    let adapter = X448DiffieHellmanAdapter()
+    let alice = try adapter.generateKeyPair()
+    let bob = try adapter.generateKeyPair()
+
+    let aliceSecret = try adapter.dh(privateKey: alice.privateKey, publicKey: bob.publicKey)
+    let bobSecret = try adapter.dh(privateKey: bob.privateKey, publicKey: alice.publicKey)
+
+    #expect(aliceSecret == bobSecret)
+    #expect(aliceSecret.count == 56)
+}
+
+@Test("X448 can derive a public key from private key bytes")
+func x448CanDerivePublicKeyFromPrivateKeyBytes() throws {
+    let adapter = X448DiffieHellmanAdapter()
+    let generated = try adapter.generateKeyPair()
+
+    let derived = try adapter.deriveKeyPair(privateKey: generated.privateKey)
+
+    #expect(derived == generated)
+}
+
 @Test("Registry and factory resolve providers by algorithm names")
 func registryAndFactoryWiring() async throws {
     let registry = NoiseCryptoAdapterRegistry(registeringBuiltIns: true)
     let snapshot = await registry.snapshot()
 
     #expect(snapshot.diffieHellman.contains("25519"))
+    #expect(snapshot.diffieHellman.contains("448"))
     #expect(snapshot.ciphers.contains("ChaChaPoly"))
     #expect(snapshot.ciphers.contains("AESGCM"))
     #expect(snapshot.hashes.contains("SHA256"))
@@ -126,13 +150,20 @@ func registryAndFactoryWiring() async throws {
             cipher: "AESGCM",
             hash: "SHA512"
         ),
+        NoiseCryptoSuiteDescriptor(
+            protocolName: .bootstrapDefault,
+            diffieHellman: "448",
+            cipher: "ChaChaPoly",
+            hash: "SHA256"
+        ),
     ]
 
     for suite in suites {
         let provider = try await factory.makeProvider(for: suite)
         let keyPair = try provider.diffieHellman.generateKeyPair()
-        #expect(keyPair.privateKey.count == 32)
-        #expect(keyPair.publicKey.count == 32)
+        let expectedLength = suite.diffieHellman == "448" ? 56 : 32
+        #expect(keyPair.privateKey.count == expectedLength)
+        #expect(keyPair.publicKey.count == expectedLength)
     }
 
     do {
@@ -172,7 +203,7 @@ func builtInRegistryIsSharedAcrossFactories() async {
     #expect(first === second)
 
     let snapshot = await first.snapshot()
-    #expect(snapshot.diffieHellman == ["25519"])
+    #expect(snapshot.diffieHellman == ["25519", "448"])
     #expect(snapshot.ciphers.contains("ChaChaPoly"))
     #expect(snapshot.ciphers.contains("AESGCM"))
     #expect(snapshot.hashes.contains("SHA256"))

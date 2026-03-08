@@ -72,6 +72,7 @@ bash ./scripts/convert-official-noise-vectors-ios.sh \
 ```
 
 The iOS wrapper resolves repo-relative input and output paths before invoking `swift run NoiseVectorConverterCLI`.
+Representative official `448` wiki vectors now also convert successfully on iOS through the built-in X448 adapter path.
 
 Cross-platform parity check for converted official vectors:
 
@@ -79,7 +80,7 @@ Cross-platform parity check for converted official vectors:
 bash ./scripts/verify-official-vector-conversion-parity.sh
 ```
 
-The repository currently ships representative official-format samples for `NN`, `NNpsk0`, and `XXpsk2` under `scripts/testdata/` and checks Android/iOS shared-fixture parity for all three.
+The repository currently ships representative official-format samples for `NN`, `NN 448`, `NNpsk0`, and `XXpsk2` under `scripts/testdata/` and checks Android/iOS shared-fixture parity for all four.
 
 ## GitHub releases
 

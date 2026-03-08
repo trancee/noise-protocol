@@ -1,6 +1,6 @@
-import CryptoKit
 import Foundation
 import NoiseCore
+import NoiseCryptoAdapters
 
 private struct OfficialNoiseVectorDocument: Decodable {
     let vectors: [OfficialNoiseVector]
@@ -183,10 +183,10 @@ public struct OfficialNoiseVectorConverter: Sendable {
         }
 
         let descriptor = try parseProtocolDescriptor(vector.protocolName)
-        let initiatorStatic = try resolveKeyPair(hexPrivateKey: vector.initStatic, fallbackSeed: 0x11)
-        let initiatorEphemeral = try resolveKeyPair(hexPrivateKey: vector.initEphemeral, fallbackSeed: 0x21)
-        let responderStatic = try resolveKeyPair(hexPrivateKey: vector.respStatic, fallbackSeed: 0x31)
-        let responderEphemeral = try resolveKeyPair(hexPrivateKey: vector.respEphemeral, fallbackSeed: 0x41)
+        let initiatorStatic = try await resolveKeyPair(hexPrivateKey: vector.initStatic, fallbackSeed: 0x11, dh: descriptor.suite.dh)
+        let initiatorEphemeral = try await resolveKeyPair(hexPrivateKey: vector.initEphemeral, fallbackSeed: 0x21, dh: descriptor.suite.dh)
+        let responderStatic = try await resolveKeyPair(hexPrivateKey: vector.respStatic, fallbackSeed: 0x31, dh: descriptor.suite.dh)
+        let responderEphemeral = try await resolveKeyPair(hexPrivateKey: vector.respEphemeral, fallbackSeed: 0x41, dh: descriptor.suite.dh)
 
         if let initRemoteStatic = vector.initRemoteStatic {
             let expected = try Data(noiseHex: initRemoteStatic)
@@ -324,18 +324,37 @@ public struct OfficialNoiseVectorConverter: Sendable {
         )
     }
 
-    private func resolveKeyPair(hexPrivateKey: String?, fallbackSeed: UInt8) throws -> NoiseDHKeyPair {
-        let privateKey = try hexPrivateKey.map { try Data(noiseHex: $0) } ?? Data((0..<32).map { UInt8((Int(fallbackSeed) + $0) & 0xFF) })
-        guard privateKey.count == 32 else {
+    private func resolveKeyPair(
+        hexPrivateKey: String?,
+        fallbackSeed: UInt8,
+        dh: NoiseVectorDiffieHellman
+    ) async throws -> NoiseDHKeyPair {
+        let keyLength: Int
+        switch dh {
+        case .x25519:
+            keyLength = 32
+        case .x448:
+            keyLength = 56
+        }
+
+        let privateKey = try hexPrivateKey.map { try Data(noiseHex: $0) } ?? Data((0..<keyLength).map {
+            UInt8((Int(fallbackSeed) + $0) & 0xFF)
+        })
+        guard privateKey.count == keyLength else {
             throw NoiseTestHarnessError.invalidFixture(
                 "Official Noise vector field has invalid length for the selected DH algorithm."
             )
         }
-        let cryptoKitKey = try Curve25519.KeyAgreement.PrivateKey(rawRepresentation: privateKey)
-        return NoiseDHKeyPair(
-            privateKey: cryptoKitKey.rawRepresentation,
-            publicKey: cryptoKitKey.publicKey.rawRepresentation
-        )
+
+        guard let adapter = await NoiseCryptoAdapterRegistry.builtIn().diffieHellman(named: dh.rawValue),
+              let deterministicAdapter = adapter as? any NoiseDeterministicDiffieHellmanAdapter
+        else {
+            throw NoiseTestHarnessError.invalidFixture(
+                "Official Noise DH algorithm '\(dh.rawValue)' is not registered as a deterministic iOS adapter."
+            )
+        }
+
+        return try deterministicAdapter.deriveKeyPair(privateKey: privateKey)
     }
 
     private func parseProtocolDescriptor(_ protocolName: String) throws -> ParsedProtocolDescriptor {
@@ -401,7 +420,11 @@ public struct OfficialNoiseVectorConverter: Sendable {
             )
         }
 
-        guard parts[2] == "25519" else {
+        let dh: NoiseVectorDiffieHellman
+        switch parts[2] {
+        case "25519": dh = .x25519
+        case "448": dh = .x448
+        default:
             throw NoiseTestHarnessError.invalidFixture("Unsupported official Noise DH algorithm '\(parts[2])'.")
         }
 
@@ -435,7 +458,7 @@ public struct OfficialNoiseVectorConverter: Sendable {
 
         return ParsedProtocolDescriptor(
             pattern: pattern,
-            suite: NoiseVectorSuite(dh: .x25519, cipher: cipher, hash: hash),
+            suite: NoiseVectorSuite(dh: dh, cipher: cipher, hash: hash),
             pskPlacements: Set(placements),
             handshakeMessages: messages
         )

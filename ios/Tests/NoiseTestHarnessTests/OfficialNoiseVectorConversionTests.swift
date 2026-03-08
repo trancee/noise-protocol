@@ -67,6 +67,23 @@ func iosPersistsConvertedOfficialVectorAsSharedFixtureJSON() async throws {
     assertEquivalentFixtureArtifacts(expected: fixture, actual: actual)
   }
 
+  @Test("iOS converts official NN 448 vector into equivalent shared fixture artifacts")
+  func iosConvertsOfficialNn448VectorIntoEquivalentSharedFixtureArtifacts() async throws {
+    let fixture = try NoiseVectorFixtureLoader().loadFixture(fileName: "noise-nn-448-chachapoly-sha256.json")
+    let converter = OfficialNoiseVectorConverter()
+
+    let converted = try await converter.convertDocument(
+      officialDocument(
+        from: fixture,
+        initiatorPskField: "init_psks",
+        responderPskField: "resp_psks"
+      )
+    )
+
+    let actual = try #require(converted.first)
+    assertEquivalentFixtureArtifacts(expected: fixture, actual: actual)
+  }
+
 @Test("iOS official vector converter rejects unsupported fallback vectors")
 func iosOfficialVectorConverterRejectsFallbackVectors() async throws {
     await assertInvalidFixture(

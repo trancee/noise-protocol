@@ -21,6 +21,9 @@ All notable changes to this project are documented in this file.
 - Versioned upstream Noise spec lock file, parser regression script, and live website verification script.
 - Weekly `Noise Spec Watch` GitHub Actions workflow for scheduled upstream spec drift checks.
 - Developer guide for upstream Noise tracking and SemVer handling in `docs/Noise_Protocol_Upstream_Tracking.md`.
+- Planned implementation roadmap for native iOS X448 support in `plan/feature-ios-x448-support-1.md`.
+- Phase 1 recommendation for native iOS X448 support now prefers a pinned pure-Swift bigint dependency (`attaswift/BigInt`) and explicitly rejects `apple/swift-numerics` for this gap because it does not provide arbitrary-precision integers.
+- Repository-root and `ios/` Swift package manifests now pin `attaswift/BigInt` exactly at `5.7.0` so native iOS X448 work can build on a fixed arithmetic dependency surface.
 
 ### Changed
 
@@ -35,11 +38,15 @@ All notable changes to this project are documented in this file.
 - Android `noise-testing` now exposes the official-vector conversion flow through `:noise-testing:convertOfficialNoiseVectors`, parameterized with Gradle properties for input, output, and optional schema path.
 - Repository scripts now include `scripts/convert-official-noise-vectors.sh` plus a smoke test and sample official vector input for the persisted conversion flow.
 - The repository conversion wrapper now normalizes repo-relative paths before invoking the Android Gradle conversion task.
-- iOS `NoiseTestHarness` now includes an official Noise wiki converter and fixture writer for directly translatable `25519` vectors, with Swift Testing coverage for conversion and persistence.
+- iOS `NoiseTestHarness` now includes an official Noise wiki converter and fixture writer for directly translatable built-in DH vectors (`25519` and `448`), with Swift Testing coverage for conversion and persistence.
 - iOS now also exposes the official-vector conversion flow through `swift run NoiseVectorConverterCLI` and a repository wrapper script for repo-root usage.
 - iOS official-vector conversion tests now also cover representative `NNpsk0` and `XXpsk2` vectors, including singular and plural official PSK field spellings.
+- Native iOS X448 support now ships through `X448DiffieHellmanAdapter`, backed by the pinned `attaswift/BigInt` dependency and registered in the built-in crypto adapter registry.
+- iOS crypto bootstrap tests now cover X448 shared-secret symmetry, deterministic public-key derivation from private bytes, and provider resolution for `diffieHellman: "448"`.
 - iOS official-vector conversion regression coverage now also locks in rejection behavior for unsupported `hybrid` vectors, asymmetric prologues, mismatched PSK values or counts, mismatched remote-static hints, and mismatched official handshake `ciphertext` / `handshake_hash` values.
-- Cross-platform verification now includes `scripts/verify-official-vector-conversion-parity.sh` to compare Android and iOS outputs for representative official Noise inputs, including `NN`, `NNpsk0`, and `XXpsk2` samples.
+- iOS official-vector conversion now also round-trips a representative official `Noise_NN_448_ChaChaPoly_SHA256` sample into the canonical shared fixture contract.
+- Cross-platform verification now includes `scripts/verify-official-vector-conversion-parity.sh` to compare Android and iOS outputs for representative official Noise inputs, including `NN`, `NN 448`, `NNpsk0`, and `XXpsk2` samples.
+- Cross-platform interop verification now also runs representative deterministic shared-fixture execution for `Noise_NN_448_ChaChaPoly_SHA256` on both Android and iOS before the official conversion parity step.
 - `docs/Noise_Test_Harness.md` now maps the official Noise wiki test-vector format onto this repository's shared fixture schema and documents the current compatibility gaps for fallback, hybrid, and asymmetric-prologue vectors.
 - Android and iOS cipher-state implementations now keep the current nonce unchanged when authenticated decryption fails, matching the Noise processing rules.
 - Android and iOS core pattern tables, benchmarks, and bootstrap tests now cover all 12 fundamental interactive Noise handshake patterns, while the shared vector corpus remains on the current 5-pattern subset.

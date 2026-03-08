@@ -17,6 +17,9 @@ let package = Package(
         .library(name: "NoiseTestHarness", targets: ["NoiseTestHarness"]),
         .executable(name: "NoiseVectorConverterCLI", targets: ["NoiseVectorConverterCLI"]),
     ],
+    dependencies: [
+        .package(url: "https://github.com/attaswift/BigInt.git", exact: "5.7.0"),
+    ],
     targets: [
         .target(
             name: "NoiseCore",
@@ -24,7 +27,10 @@ let package = Package(
         ),
         .target(
             name: "NoiseCryptoAdapters",
-            dependencies: ["NoiseCore"],
+            dependencies: [
+                "NoiseCore",
+                .product(name: "BigInt", package: "BigInt"),
+            ],
             swiftSettings: packageSwiftSettings
         ),
         .target(

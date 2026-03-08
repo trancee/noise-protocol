@@ -22,4 +22,20 @@ grep -q '"vector_id"[[:space:]]*:[[:space:]]*"noise-nn-25519-chachapoly-sha256"'
 grep -q '"protocol"[[:space:]]*:[[:space:]]*{' "$output_file"
 grep -q '"\$schema"[[:space:]]*:[[:space:]]*"..\\/..\\/schema\\/noise-vector-v1.schema.json"' "$output_file"
 
+echo "[official-convert-ios-test] Running iOS wrapper script against representative official 448 vector..."
+(
+  cd "$repo_root"
+  ./scripts/convert-official-noise-vectors-ios.sh "scripts/testdata/official-noise-nn-448-vector.json" "$temp_output/official-448"
+)
+
+output_448_file="$temp_output/official-448/noise-nn-448-chachapoly-sha256.json"
+
+if [[ ! -f "$output_448_file" ]]; then
+  echo "[official-convert-ios-test] Expected 448 output fixture missing: $output_448_file" >&2
+  exit 1
+fi
+
+grep -q '"vector_id"[[:space:]]*:[[:space:]]*"noise-nn-448-chachapoly-sha256"' "$output_448_file"
+grep -q '"dh"[[:space:]]*:[[:space:]]*"448"' "$output_448_file"
+
 echo "[official-convert-ios-test] Wrapper script produced the expected shared fixture file."

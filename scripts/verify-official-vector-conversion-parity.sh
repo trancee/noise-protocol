@@ -75,6 +75,7 @@ PY
 }
 
 compare_fixture "$repo_root/scripts/testdata/official-noise-nn-vector.json" "noise-nn-25519-chachapoly-sha256.json"
+compare_fixture "$repo_root/scripts/testdata/official-noise-nn-448-vector.json" "noise-nn-448-chachapoly-sha256.json"
 compare_fixture "$repo_root/scripts/testdata/official-noise-nnpsk0-vector.json" "noise-nnpsk0-25519-chachapoly-sha256.json"
 compare_fixture "$repo_root/scripts/testdata/official-noise-xxpsk2-vector.json" "noise-xxpsk2-25519-chachapoly-sha256.json"
 

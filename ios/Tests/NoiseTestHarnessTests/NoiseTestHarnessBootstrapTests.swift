@@ -65,6 +65,17 @@ func deterministicExecutionMatchesExpectedArtifactsForRepresentativePskFixtures(
     }
 }
 
+@Test("Deterministic execution matches expected artifacts for representative 448 fixture")
+func deterministicExecutionMatchesExpectedArtifactsForRepresentative448Fixture() async throws {
+    let fixture = try NoiseVectorFixtureLoader().loadFixture(fileName: "noise-nn-448-chachapoly-sha256.json")
+    let runner = NoiseVectorRunner()
+
+    let result = try await runner.verifyExpected(fixture)
+
+    #expect(result.handshakeMessages.count == fixture.expected.handshakeMessages.count)
+    #expect(result.handshakeHashHex.lowercased() == fixture.expected.handshakeHash.lowercased())
+}
+
 @Test("Fixture repository caches corpus and supports indexed lookup")
 func fixtureRepositoryCachesCorpusAndSupportsIndexedLookup() async throws {
     let repository = NoiseVectorFixtureRepository()
@@ -126,7 +137,7 @@ func runnerReportsSupportedSharedFixtures() async throws {
 
     let supported = try await runner.supportedFixtures(repository: repository)
 
-    #expect(supported.count == 22)
+    #expect(supported.count == 42)
     for fixture in supported {
         #expect(await runner.supports(fixture))
     }
@@ -176,7 +187,7 @@ func deterministicExecutionValidatesAllSupportedFixtures() async throws {
     let repository = NoiseVectorFixtureRepository()
     let runner = NoiseVectorRunner()
     let fixtures = try await runner.supportedFixtures(repository: repository)
-    #expect(fixtures.count == 22)
+    #expect(fixtures.count == 42)
 
     for fixture in fixtures {
         _ = try await runner.verifyExpected(fixture)

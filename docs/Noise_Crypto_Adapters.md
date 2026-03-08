@@ -84,12 +84,20 @@ Examples:
 `ios/Sources/NoiseCryptoAdapters` provides built-in adapters and registry/factory wiring by algorithm name:
 
 - DH: `25519` -> `Curve25519DiffieHellmanAdapter`
+- DH: `448` -> `X448DiffieHellmanAdapter`
 - AEAD: `ChaChaPoly` -> `ChaChaPolyCipherAdapter`
 - AEAD: `AESGCM` -> `AESGCMCipherAdapter`
 - Hash/HKDF: `SHA256` -> `SHA256HashAdapter`
 - Hash/HKDF: `SHA512` -> `SHA512HashAdapter`
 
 Use `NoiseCryptoAdapterRegistry(registeringBuiltIns: true)` and `NoiseCryptoAdapterFactory` to construct a `NoiseCryptoProvider` from `NoiseCryptoSuiteDescriptor` without adding protocol logic to adapters.
+
+Current limitation:
+- Built-in iOS DH support now includes both `25519` and `448`.
+- Native iOS X448 support is implemented with a pure-Swift bigint dependency (`attaswift/BigInt` pinned exactly at `5.7.0` in both SwiftPM entrypoints) because `apple/swift-numerics` does not currently ship arbitrary-precision integers.
+- `Curve25519DiffieHellmanAdapter` and `X448DiffieHellmanAdapter` both expose deterministic private-key derivation helpers so the official-vector converter can derive local public keys from official private-key inputs before replaying the transcript through `NoiseVectorRunner`.
+- Representative official `448` vector conversion now succeeds on iOS, and the repository parity script compares Android and iOS outputs for that path as well.
+- The tracked implementation plan for the remaining iOS X448 follow-up work is `plan/feature-ios-x448-support-1.md`.
 
 ---
 

@@ -69,6 +69,15 @@ class NoiseTestHarnessTest {
     }
 
     @Test
+    fun deterministicRunMatchesExpectedArtifactsForRepresentative448Fixture() {
+        val fixture = repository.requireById("noise-nn-448-chachapoly-sha256")
+
+        val result = harness.runDeterministic(fixture)
+
+        assertExpectedArtifacts(fixture, result)
+    }
+
+    @Test
     fun fixtureRepositoryCachesCorpusAndIndexesByVectorId() {
         val firstCatalog = repository.catalog()
         val secondCatalog = repository.catalog()
