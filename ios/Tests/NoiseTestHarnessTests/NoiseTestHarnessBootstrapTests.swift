@@ -32,6 +32,21 @@ func deterministicExecutionIsStableAcrossRuns() async throws {
     #expect(first.handshakeMessages.count == fixture.inputs.payloads.count)
 }
 
+@Test("Deterministic execution matches expected artifacts for shared vector")
+func deterministicExecutionMatchesExpectedArtifactsForSharedVector() async throws {
+    let fixture = try NoiseVectorFixtureLoader().loadFixture(fileName: "noise-nn-placeholder.json")
+    let runner = NoiseVectorRunner()
+
+    let result = try await runner.verifyExpected(fixture)
+
+    #expect(result.handshakeMessages.count == fixture.expected.handshakeMessages.count)
+    #expect(result.handshakeHashHex.lowercased() == fixture.expected.handshakeHash.lowercased())
+    #expect(result.splitTransportKeys.initiator.txHex.lowercased() == fixture.expected.splitTransportKeys.initiator.tx.lowercased())
+    #expect(result.splitTransportKeys.initiator.rxHex.lowercased() == fixture.expected.splitTransportKeys.initiator.rx.lowercased())
+    #expect(result.splitTransportKeys.responder.txHex.lowercased() == fixture.expected.splitTransportKeys.responder.tx.lowercased())
+    #expect(result.splitTransportKeys.responder.rxHex.lowercased() == fixture.expected.splitTransportKeys.responder.rx.lowercased())
+}
+
 @Test("Fixture repository caches corpus and supports indexed lookup")
 func fixtureRepositoryCachesCorpusAndSupportsIndexedLookup() async throws {
     let repository = NoiseVectorFixtureRepository()

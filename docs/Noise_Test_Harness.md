@@ -266,4 +266,4 @@ The test harness does NOT attempt to:
 ## 15. Cross-Platform Interop Verification Command
 
 - Run `./scripts/verify-cross-platform-interop.sh` from the repository root.
-- The command executes Android and iOS deterministic artifact checks against the same shared fixture contract and fails if either platform diverges on handshake messages, handshake hash, or split keys.
+- The command executes Android and iOS fixture-expected artifact checks against the same shared vector (`noise-nn-placeholder`) and fails if either platform diverges on handshake messages, handshake hash, or split keys.

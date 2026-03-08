@@ -13,7 +13,7 @@ echo "[interop] Running Android deterministic artifact parity test..."
 echo "[interop] Running iOS deterministic artifact parity test..."
 (
   cd "$repo_root/ios"
-  swift test --filter deterministicExecutionIsStableAcrossRuns
+  swift test --filter deterministicExecutionMatchesExpectedArtifactsForSharedVector
 )
 
 echo "[interop] Cross-platform deterministic fixture parity passed."
