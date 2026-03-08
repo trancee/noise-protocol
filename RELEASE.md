@@ -35,7 +35,11 @@ Optional Gradle signing property: `signingInMemoryKeyId`.
 - `VERSION` is the single source of truth for Android, iOS, and release automation.
 - Android reads version from `../VERSION` (`android/build.gradle.kts`).
 - Release tags must be `v<VERSION>`.
+- The tracked upstream Noise spec baseline lives in `noise-spec.lock`.
+- Release preflight must fail if `scripts/verify-noise-spec-upstream.sh` detects upstream drift.
 - Parity checks:
+  - `bash ./scripts/test-verify-noise-spec-upstream.sh`
+  - `bash ./scripts/verify-noise-spec-upstream.sh`
   - `bash ./scripts/verify-version-parity.sh`
   - `bash ./scripts/verify-version-parity.sh <tag>`
 
@@ -44,6 +48,10 @@ Optional Gradle signing property: `signingInMemoryKeyId`.
 Run these checks before creating the release trigger:
 
 ```bash
+# Noise spec lock and parser
+bash ./scripts/test-verify-noise-spec-upstream.sh
+bash ./scripts/verify-noise-spec-upstream.sh
+
 # Version parity
 bash ./scripts/verify-version-parity.sh
 
@@ -71,8 +79,9 @@ Verify these repository secrets are present:
 
 1. Update `VERSION` to the target release version (`MAJOR.MINOR.PATCH`).
 2. Update `CHANGELOG.md` so release notes are ready before tagging.
-3. Commit the release-prep changes on the branch/commit you will release.
-4. Re-run `bash ./scripts/verify-version-parity.sh` after editing.
+3. If `noise-spec.lock` changed, document the reason and SemVer impact in `docs/Noise_Protocol_Upstream_Tracking.md`.
+4. Commit the release-prep changes on the branch/commit you will release.
+5. Re-run `bash ./scripts/verify-noise-spec-upstream.sh` and `bash ./scripts/verify-version-parity.sh` after editing.
 
 ## 5) Trigger the release workflow
 

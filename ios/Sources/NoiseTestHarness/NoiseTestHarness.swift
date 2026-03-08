@@ -90,11 +90,13 @@ public struct NoiseVectorPayloadInput: Codable, Sendable, Equatable {
 public struct NoiseVectorInputs: Codable, Sendable, Equatable {
     public var prologue: String
     public var keyMaterial: NoiseVectorKeyMaterial
+    public var preSharedKeys: [String: String]?
     public var payloads: [NoiseVectorPayloadInput]
 
     enum CodingKeys: String, CodingKey {
         case prologue
         case keyMaterial = "key_material"
+        case preSharedKeys = "pre_shared_keys"
         case payloads
     }
 }
@@ -642,6 +644,7 @@ public actor NoiseVectorRunner {
             isInitiator: true,
             handshakePattern: pattern,
             prologue: prologue,
+            preSharedKeys: try fixture.inputs.resolvedPreSharedKeys(),
             localStaticKey: initiatorStatic,
             localEphemeralKey: initiatorEphemeral,
             remoteStaticKey: responderStatic.publicKey
@@ -652,6 +655,7 @@ public actor NoiseVectorRunner {
             isInitiator: false,
             handshakePattern: pattern,
             prologue: prologue,
+            preSharedKeys: try fixture.inputs.resolvedPreSharedKeys(),
             localStaticKey: responderStatic,
             localEphemeralKey: responderEphemeral,
             remoteStaticKey: initiatorStatic.publicKey
@@ -822,6 +826,21 @@ private extension NoiseVectorKeyPair {
             privateKey: try Data(noiseHex: `private`),
             publicKey: try Data(noiseHex: `public`)
         )
+    }
+}
+
+private extension NoiseVectorInputs {
+    func resolvedPreSharedKeys() throws -> [Int: Data] {
+        guard let preSharedKeys else {
+            return [:]
+        }
+
+        return try preSharedKeys.reduce(into: [Int: Data]()) { result, entry in
+            guard entry.key.hasPrefix("psk"), let placement = Int(entry.key.dropFirst(3)) else {
+                throw NoiseTestHarnessError.invalidFixture("Unsupported pre-shared key label \(entry.key).")
+            }
+            result[placement] = try Data(noiseHex: entry.value)
+        }
     }
 }
 

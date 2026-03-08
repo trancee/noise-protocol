@@ -111,6 +111,17 @@ class CryptoProviderTest {
     }
 
     @Test
+    fun x25519CanDerivePublicKeyFromPrivateKeyBytes() {
+        val adapter = X25519DiffieHellmanAdapter()
+        val generated = adapter.generateKeyPair()
+
+        val derived = adapter.deriveKeyPair(generated.privateKey)
+
+        assertArrayEquals(generated.privateKey, derived.privateKey)
+        assertArrayEquals(generated.publicKey, derived.publicKey)
+    }
+
+    @Test
     fun x448SharedSecretIsSymmetric() {
         val adapter = X448DiffieHellmanAdapter()
         val alice = adapter.generateKeyPair()
@@ -121,6 +132,17 @@ class CryptoProviderTest {
 
         assertArrayEquals(aliceShared, bobShared)
         assertEquals(56, aliceShared.size)
+    }
+
+    @Test
+    fun x448CanDerivePublicKeyFromPrivateKeyBytes() {
+        val adapter = X448DiffieHellmanAdapter()
+        val generated = adapter.generateKeyPair()
+
+        val derived = adapter.deriveKeyPair(generated.privateKey)
+
+        assertArrayEquals(generated.privateKey, derived.privateKey)
+        assertArrayEquals(generated.publicKey, derived.publicKey)
     }
 
     @Test

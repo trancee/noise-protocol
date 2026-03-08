@@ -25,9 +25,45 @@ func bootstrapLibraryVersion() throws {
     #expect(NoiseCoreVersion.libraryVersion == canonicalVersion)
 }
 
-@Test("Pattern table ordering is correct for NN/NK/KK/IK/XX")
+@Test("Protocol descriptors parse base patterns when PSK modifiers are present")
+func protocolDescriptorParsesPskModifiers() {
+    let descriptor = NoiseProtocolDescriptor(rawValue: "Noise_XXpsk0+psk2_25519_AESGCM_SHA256")
+    #expect(NoiseHandshakePatternName(protocolDescriptor: descriptor) == .xx)
+}
+
+@Test("Protocol descriptors reject unsupported modifier grammar")
+func protocolDescriptorRejectsUnsupportedModifierGrammar() {
+    let descriptor = NoiseProtocolDescriptor(rawValue: "Noise_XXfallback_25519_AESGCM_SHA256")
+    #expect(NoiseHandshakePatternName(protocolDescriptor: descriptor) == nil)
+}
+
+@Test("Pattern table ordering is correct for all currently supported handshake patterns")
 func handshakePatternTableOrdering() {
     let expected: [(NoiseHandshakePatternName, [NoisePatternMessage], [NoisePatternMessage])] = [
+        (
+            .n,
+            [NoisePatternMessage(direction: .responderToInitiator, tokens: [.s])],
+            [
+                NoisePatternMessage(direction: .initiatorToResponder, tokens: [.e, .es]),
+            ]
+        ),
+        (
+            .k,
+            [
+                NoisePatternMessage(direction: .initiatorToResponder, tokens: [.s]),
+                NoisePatternMessage(direction: .responderToInitiator, tokens: [.s]),
+            ],
+            [
+                NoisePatternMessage(direction: .initiatorToResponder, tokens: [.e, .es, .ss]),
+            ]
+        ),
+        (
+            .x,
+            [NoisePatternMessage(direction: .responderToInitiator, tokens: [.s])],
+            [
+                NoisePatternMessage(direction: .initiatorToResponder, tokens: [.e, .es, .s, .ss]),
+            ]
+        ),
         (
             .nn,
             [],
@@ -45,6 +81,40 @@ func handshakePatternTableOrdering() {
             ]
         ),
         (
+            .nx,
+            [],
+            [
+                NoisePatternMessage(direction: .initiatorToResponder, tokens: [.e]),
+                NoisePatternMessage(direction: .responderToInitiator, tokens: [.e, .ee, .s, .es]),
+            ]
+        ),
+        (
+            .xn,
+            [],
+            [
+                NoisePatternMessage(direction: .initiatorToResponder, tokens: [.e]),
+                NoisePatternMessage(direction: .responderToInitiator, tokens: [.e, .ee]),
+                NoisePatternMessage(direction: .initiatorToResponder, tokens: [.s, .se]),
+            ]
+        ),
+        (
+            .xk,
+            [NoisePatternMessage(direction: .responderToInitiator, tokens: [.s])],
+            [
+                NoisePatternMessage(direction: .initiatorToResponder, tokens: [.e, .es]),
+                NoisePatternMessage(direction: .responderToInitiator, tokens: [.e, .ee]),
+                NoisePatternMessage(direction: .initiatorToResponder, tokens: [.s, .se]),
+            ]
+        ),
+        (
+            .kn,
+            [NoisePatternMessage(direction: .initiatorToResponder, tokens: [.s])],
+            [
+                NoisePatternMessage(direction: .initiatorToResponder, tokens: [.e]),
+                NoisePatternMessage(direction: .responderToInitiator, tokens: [.e, .ee, .se]),
+            ]
+        ),
+        (
             .kk,
             [
                 NoisePatternMessage(direction: .initiatorToResponder, tokens: [.s]),
@@ -56,11 +126,35 @@ func handshakePatternTableOrdering() {
             ]
         ),
         (
+            .kx,
+            [NoisePatternMessage(direction: .initiatorToResponder, tokens: [.s])],
+            [
+                NoisePatternMessage(direction: .initiatorToResponder, tokens: [.e]),
+                NoisePatternMessage(direction: .responderToInitiator, tokens: [.e, .ee, .se, .s, .es]),
+            ]
+        ),
+        (
+            .in,
+            [],
+            [
+                NoisePatternMessage(direction: .initiatorToResponder, tokens: [.e, .s]),
+                NoisePatternMessage(direction: .responderToInitiator, tokens: [.e, .ee, .se]),
+            ]
+        ),
+        (
             .ik,
             [NoisePatternMessage(direction: .responderToInitiator, tokens: [.s])],
             [
                 NoisePatternMessage(direction: .initiatorToResponder, tokens: [.e, .es, .s, .ss]),
                 NoisePatternMessage(direction: .responderToInitiator, tokens: [.e, .ee, .se]),
+            ]
+        ),
+        (
+            .ix,
+            [],
+            [
+                NoisePatternMessage(direction: .initiatorToResponder, tokens: [.e, .s]),
+                NoisePatternMessage(direction: .responderToInitiator, tokens: [.e, .ee, .se, .s, .es]),
             ]
         ),
         (
@@ -74,7 +168,7 @@ func handshakePatternTableOrdering() {
         ),
     ]
 
-    #expect(NoiseHandshakePatterns.all.count == 5)
+    #expect(NoiseHandshakePatterns.all.count == 15)
     for (name, preMessages, messages) in expected {
         let pattern = NoiseHandshakePatterns.pattern(named: name)
         #expect(pattern.preMessages == preMessages)
@@ -178,6 +272,27 @@ func cipherStateNonceBehavior() throws {
     }
 }
 
+@Test("CipherState preserves nonce when decrypt authentication fails")
+func cipherStatePreservesNonceOnDecryptFailure() throws {
+    var state = NoiseCipherState(key: Data([0x42]), nonce: 0)
+    let cipher = FakeCipherAlgorithm()
+
+    do {
+        _ = try state.decryptWithAd(Data([0x01]), ciphertext: Data([0x99, 0x98]), using: cipher)
+        Issue.record("Expected decrypt authentication failure.")
+    } catch {
+        #expect(state.nonce == 0)
+    }
+
+    let ciphertext = try state.encryptWithAd(Data([0x01]), plaintext: Data([0x02]), using: cipher)
+    #expect(state.nonce == 1)
+
+    var receiver = NoiseCipherState(key: Data([0x42]), nonce: 0)
+    let plaintext = try receiver.decryptWithAd(Data([0x01]), ciphertext: ciphertext, using: cipher)
+    #expect(plaintext == Data([0x02]))
+    #expect(receiver.nonce == 1)
+}
+
 @Test("SymmetricState is deterministic with fake crypto")
 func symmetricStateDeterministicWithFakeCrypto() throws {
     let hash = FakeHashAlgorithm()
@@ -202,6 +317,32 @@ func symmetricStateDeterministicWithFakeCrypto() throws {
     let senderSplit = try sender.split(hash: hash)
     let receiverSplit = try receiver.split(hash: hash)
     #expect(senderSplit == receiverSplit)
+}
+
+@Test("SymmetricState mixKeyAndHash is deterministic with fake crypto")
+func symmetricStateMixKeyAndHashDeterministic() throws {
+    let hash = FakeHashAlgorithm()
+    let cipher = FakeCipherAlgorithm()
+
+    var sender = NoiseSymmetricState(
+        protocolName: NoiseProtocolDescriptor(rawValue: "Noise_XXpsk2_25519_AESGCM_SHA256"),
+        hash: hash
+    )
+    var receiver = NoiseSymmetricState(
+        protocolName: NoiseProtocolDescriptor(rawValue: "Noise_XXpsk2_25519_AESGCM_SHA256"),
+        hash: hash
+    )
+
+    try sender.mixKeyAndHash(Data([0x09, 0x08, 0x07, 0x06]), hash: hash)
+    try receiver.mixKeyAndHash(Data([0x09, 0x08, 0x07, 0x06]), hash: hash)
+
+    let plaintext = Data("deterministic-payload".utf8)
+    let ciphertext = try sender.encryptAndHash(plaintext, cipher: cipher, hash: hash)
+    let decrypted = try receiver.decryptAndHash(ciphertext, cipher: cipher, hash: hash)
+
+    #expect(decrypted == plaintext)
+    #expect(sender.handshakeHash == receiver.handshakeHash)
+    #expect(sender.chainingKey == receiver.chainingKey)
 }
 
 @Test("Handshake message encoding round-trips key payloads and body")
@@ -314,6 +455,138 @@ func handshakeSessionReportsDirectionAndCompletion() async throws {
     #expect(try await responder.expectedDirection() == nil)
     #expect(try await initiator.isComplete())
     #expect(try await responder.isComplete())
+}
+
+@Test("Handshake state supports PSK modifiers derived from protocol name")
+func handshakeStateSupportsPskModifiersFromProtocolName() throws {
+    let crypto = NoiseCryptoProvider(
+        diffieHellman: FakeDiffieHellmanAlgorithm(),
+        cipher: FakeCipherAlgorithm(),
+        hash: FakeHashAlgorithm()
+    )
+    let protocolName = NoiseProtocolDescriptor(rawValue: "Noise_XXpsk0+psk2_25519_AESGCM_SHA256")
+    let preSharedKeys = [
+        0: Data([0x01, 0x03, 0x05, 0x07]),
+        2: Data([0x02, 0x04, 0x06, 0x08]),
+    ]
+
+    var initiator = try NoiseHandshakeState(
+        configuration: NoiseHandshakeConfiguration(
+            protocolName: protocolName,
+            isInitiator: true,
+            handshakePattern: .xx,
+            preSharedKeys: preSharedKeys,
+            localStaticKey: NoiseDHKeyPair(privateKey: Data([0xA1]), publicKey: Data([0xB1])),
+            localEphemeralKey: NoiseDHKeyPair(privateKey: Data([0xA2]), publicKey: Data([0xB2]))
+        ),
+        hash: crypto.hash
+    )
+    var responder = try NoiseHandshakeState(
+        configuration: NoiseHandshakeConfiguration(
+            protocolName: protocolName,
+            isInitiator: false,
+            handshakePattern: .xx,
+            preSharedKeys: preSharedKeys,
+            localStaticKey: NoiseDHKeyPair(privateKey: Data([0xC1]), publicKey: Data([0xD1])),
+            localEphemeralKey: NoiseDHKeyPair(privateKey: Data([0xC2]), publicKey: Data([0xD2]))
+        ),
+        hash: crypto.hash
+    )
+
+    let message1 = try initiator.writeMessage(payload: Data("m1".utf8), crypto: crypto)
+    #expect(message1.keyPayloads.count == 1)
+    #expect(try responder.readMessage(message1, crypto: crypto) == Data("m1".utf8))
+
+    let message2 = try responder.writeMessage(payload: Data("m2".utf8), crypto: crypto)
+    #expect(message2.keyPayloads.count == 2)
+    #expect(try initiator.readMessage(message2, crypto: crypto) == Data("m2".utf8))
+
+    let message3 = try initiator.writeMessage(payload: Data("m3".utf8), crypto: crypto)
+    #expect(message3.keyPayloads.count == 1)
+    #expect(try responder.readMessage(message3, crypto: crypto) == Data("m3".utf8))
+
+    #expect(initiator.isComplete)
+    #expect(responder.isComplete)
+    #expect(initiator.handshakeHash == responder.handshakeHash)
+}
+
+@Test("Handshake state rejects missing PSK material for protocol modifiers")
+func handshakeStateRejectsMissingPskMaterial() {
+    let hash = FakeHashAlgorithm()
+
+    do {
+        _ = try NoiseHandshakeState(
+            configuration: NoiseHandshakeConfiguration(
+                protocolName: NoiseProtocolDescriptor(rawValue: "Noise_NNpsk0_25519_AESGCM_SHA256"),
+                isInitiator: true,
+                handshakePattern: .nn,
+                localEphemeralKey: NoiseDHKeyPair(privateKey: Data([0xA2]), publicKey: Data([0xB2]))
+            ),
+            hash: hash
+        )
+        Issue.record("Expected missing PSK material to be rejected.")
+    } catch let error as NoiseCoreError {
+        if case let .missingKeyMaterial(detail) = error {
+            #expect(detail.contains("psk0"))
+        } else {
+            Issue.record("Unexpected NoiseCoreError: \(error)")
+        }
+    } catch {
+        Issue.record("Unexpected error type: \(error)")
+    }
+}
+
+@Test("Handshake state rejects unsupported protocol-name modifiers")
+func handshakeStateRejectsUnsupportedProtocolNameModifiers() {
+    let hash = FakeHashAlgorithm()
+
+    do {
+        _ = try NoiseHandshakeState(
+            configuration: NoiseHandshakeConfiguration(
+                protocolName: NoiseProtocolDescriptor(rawValue: "Noise_XXfallback_25519_AESGCM_SHA256"),
+                isInitiator: true,
+                handshakePattern: .xx,
+                localStaticKey: NoiseDHKeyPair(privateKey: Data([0xA1]), publicKey: Data([0xB1])),
+                localEphemeralKey: NoiseDHKeyPair(privateKey: Data([0xA2]), publicKey: Data([0xB2]))
+            ),
+            hash: hash
+        )
+        Issue.record("Expected unsupported modifiers to be rejected.")
+    } catch let error as NoiseCoreError {
+        if case let .invalidMessage(detail) = error {
+            #expect(detail.contains("Only base patterns and pskN modifiers"))
+        } else {
+            Issue.record("Unexpected NoiseCoreError: \(error)")
+        }
+    } catch {
+        Issue.record("Unexpected error type: \(error)")
+    }
+}
+
+@Test("Handshake state rejects protocol-name pattern mismatches")
+func handshakeStateRejectsProtocolNamePatternMismatches() {
+    let hash = FakeHashAlgorithm()
+
+    do {
+        _ = try NoiseHandshakeState(
+            configuration: NoiseHandshakeConfiguration(
+                protocolName: NoiseProtocolDescriptor(rawValue: "Noise_XX_25519_AESGCM_SHA256"),
+                isInitiator: true,
+                handshakePattern: .nn,
+                localEphemeralKey: NoiseDHKeyPair(privateKey: Data([0xA2]), publicKey: Data([0xB2]))
+            ),
+            hash: hash
+        )
+        Issue.record("Expected protocol-name pattern mismatch to be rejected.")
+    } catch let error as NoiseCoreError {
+        if case let .invalidMessage(detail) = error {
+            #expect(detail.contains("does not match selected handshake pattern"))
+        } else {
+            Issue.record("Unexpected NoiseCoreError: \(error)")
+        }
+    } catch {
+        Issue.record("Unexpected error type: \(error)")
+    }
 }
 
 @Test("Benchmark deterministic handshake throughput across patterns and built-in suites")
@@ -621,18 +894,48 @@ private func makeBenchmarkHandshakeState(
     let remoteStaticKey: Data?
 
     switch pattern {
+    case .n:
+        localStaticKey = isInitiator ? nil : keyMaterial.responderStatic
+        remoteStaticKey = isInitiator ? keyMaterial.responderStatic.publicKey : nil
+    case .k:
+        localStaticKey = isInitiator ? keyMaterial.initiatorStatic : keyMaterial.responderStatic
+        remoteStaticKey = isInitiator ? keyMaterial.responderStatic.publicKey : keyMaterial.initiatorStatic.publicKey
+    case .x:
+        localStaticKey = isInitiator ? keyMaterial.initiatorStatic : keyMaterial.responderStatic
+        remoteStaticKey = isInitiator ? keyMaterial.responderStatic.publicKey : nil
     case .nn:
         localStaticKey = nil
         remoteStaticKey = nil
     case .nk:
         localStaticKey = isInitiator ? nil : keyMaterial.responderStatic
         remoteStaticKey = isInitiator ? keyMaterial.responderStatic.publicKey : nil
+    case .nx:
+        localStaticKey = isInitiator ? nil : keyMaterial.responderStatic
+        remoteStaticKey = nil
+    case .xn:
+        localStaticKey = isInitiator ? keyMaterial.initiatorStatic : nil
+        remoteStaticKey = nil
+    case .xk:
+        localStaticKey = isInitiator ? keyMaterial.initiatorStatic : keyMaterial.responderStatic
+        remoteStaticKey = isInitiator ? keyMaterial.responderStatic.publicKey : nil
+    case .kn:
+        localStaticKey = isInitiator ? keyMaterial.initiatorStatic : nil
+        remoteStaticKey = isInitiator ? nil : keyMaterial.initiatorStatic.publicKey
     case .kk:
         localStaticKey = isInitiator ? keyMaterial.initiatorStatic : keyMaterial.responderStatic
         remoteStaticKey = isInitiator ? keyMaterial.responderStatic.publicKey : keyMaterial.initiatorStatic.publicKey
+    case .kx:
+        localStaticKey = isInitiator ? keyMaterial.initiatorStatic : keyMaterial.responderStatic
+        remoteStaticKey = isInitiator ? nil : keyMaterial.initiatorStatic.publicKey
+    case .in:
+        localStaticKey = isInitiator ? keyMaterial.initiatorStatic : nil
+        remoteStaticKey = nil
     case .ik:
         localStaticKey = isInitiator ? keyMaterial.initiatorStatic : keyMaterial.responderStatic
         remoteStaticKey = isInitiator ? keyMaterial.responderStatic.publicKey : nil
+    case .ix:
+        localStaticKey = isInitiator ? keyMaterial.initiatorStatic : keyMaterial.responderStatic
+        remoteStaticKey = nil
     case .xx:
         localStaticKey = isInitiator ? keyMaterial.initiatorStatic : keyMaterial.responderStatic
         remoteStaticKey = nil

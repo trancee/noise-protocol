@@ -4,6 +4,10 @@ import NoiseCore
 
 public typealias NoiseKeyPair = NoiseDHKeyPair
 
+public protocol NoiseDeterministicDiffieHellmanAdapter: NoiseDiffieHellmanAdapter {
+    func deriveKeyPair(privateKey: Data) throws -> NoiseDHKeyPair
+}
+
 public protocol NoiseDiffieHellmanAdapter: NoiseDiffieHellmanAlgorithm {
     var name: String { get }
 }
@@ -24,7 +28,7 @@ public enum NoiseCryptoAdapterError: Error, Sendable, Equatable {
     case invalidCiphertext(String)
 }
 
-public struct Curve25519DiffieHellmanAdapter: NoiseDiffieHellmanAdapter {
+public struct Curve25519DiffieHellmanAdapter: NoiseDeterministicDiffieHellmanAdapter {
     private static let keyLength = 32
 
     public let name: String = "25519"
@@ -33,6 +37,22 @@ public struct Curve25519DiffieHellmanAdapter: NoiseDiffieHellmanAdapter {
 
     public func generateKeyPair() throws -> NoiseDHKeyPair {
         let privateKey = Curve25519.KeyAgreement.PrivateKey()
+        return NoiseDHKeyPair(
+            privateKey: privateKey.rawRepresentation,
+            publicKey: privateKey.publicKey.rawRepresentation
+        )
+    }
+
+    public func deriveKeyPair(privateKey: Data) throws -> NoiseDHKeyPair {
+        guard privateKey.count == Self.keyLength else {
+            throw NoiseCryptoAdapterError.invalidKeyLength(
+                algorithm: name,
+                expected: Self.keyLength,
+                actual: privateKey.count
+            )
+        }
+
+        let privateKey = try Curve25519.KeyAgreement.PrivateKey(rawRepresentation: privateKey)
         return NoiseDHKeyPair(
             privateKey: privateKey.rawRepresentation,
             publicKey: privateKey.publicKey.rawRepresentation
@@ -448,6 +468,7 @@ public actor NoiseCryptoAdapterRegistry {
 
     private static let builtInDiffieHellmanAdapters: [any NoiseDiffieHellmanAdapter] = [
         Curve25519DiffieHellmanAdapter(),
+        X448DiffieHellmanAdapter(),
     ]
     private static let builtInCipherAdapters: [any NoiseCipherAdapter] = [
         ChaChaPolyCipherAdapter(),
@@ -456,6 +477,8 @@ public actor NoiseCryptoAdapterRegistry {
     private static let builtInHashAdapters: [any NoiseHashAdapter] = [
         SHA256HashAdapter(),
         SHA512HashAdapter(),
+        Blake2sHashAdapter(),
+        Blake2bHashAdapter(),
     ]
 
     private static let sharedBuiltInRegistry = NoiseCryptoAdapterRegistry(registeringBuiltIns: true)

@@ -109,6 +109,8 @@ class HandshakeState private constructor(
     private val symmetricState: SymmetricState,
     private val diffieHellmanFunction: NoiseDiffieHellmanFunction,
     private val ephemeralKeyGenerator: () -> NoiseKeyPair,
+    private val preSharedKeys: Map<Int, ByteArray>,
+    private val pskPlacements: Set<Int>,
     localStatic: NoiseKeyPair?,
     localEphemeral: NoiseKeyPair?,
     remoteStatic: ByteArray?,
@@ -127,7 +129,7 @@ class HandshakeState private constructor(
     fun expectedDirection(): MessageDirection? = pattern.messages.getOrNull(messageIndex)?.direction
 
     fun expectedTokenPayloads(): List<HandshakeToken>? = pattern.messages.getOrNull(messageIndex)
-        ?.tokens
+        ?.let { effectiveTokens(it, messageIndex) }
         ?.filter { token ->
             token == HandshakeToken.E || token == HandshakeToken.S
         }
@@ -141,7 +143,8 @@ class HandshakeState private constructor(
         check(messagePattern.direction.isSentBy(role)) { "Expected to read before writing next message." }
 
         val tokenValues = mutableListOf<HandshakeTokenValue>()
-        for (token in messagePattern.tokens) {
+        val tokens = effectiveTokens(messagePattern, messageIndex)
+        for ((tokenIndex, token) in tokens.withIndex()) {
             when (token) {
                 HandshakeToken.E -> {
                     val generated = ephemeralKeyGenerator().copyKeyPair()
@@ -160,6 +163,8 @@ class HandshakeState private constructor(
                     }
                     tokenValues += HandshakeTokenValue(token = token, data = encodedStatic)
                 }
+
+                HandshakeToken.PSK -> symmetricState.mixKeyAndHash(requirePreSharedKey(pskPlacementFor(tokenIndex)))
 
                 HandshakeToken.EE,
                 HandshakeToken.ES,
@@ -185,7 +190,8 @@ class HandshakeState private constructor(
         require(message.direction == messagePattern.direction) { "Unexpected message direction." }
 
         val tokenIterator = message.tokenValues.iterator()
-        for (token in messagePattern.tokens) {
+        val tokens = effectiveTokens(messagePattern, messageIndex)
+        for ((tokenIndex, token) in tokens.withIndex()) {
             when (token) {
                 HandshakeToken.E -> {
                     val tokenValue = readTokenValue(tokenIterator, token)
@@ -203,6 +209,8 @@ class HandshakeState private constructor(
                     }
                     remoteStaticKey = remoteStatic
                 }
+
+                HandshakeToken.PSK -> symmetricState.mixKeyAndHash(requirePreSharedKey(pskPlacementFor(tokenIndex)))
 
                 HandshakeToken.EE,
                 HandshakeToken.ES,
@@ -264,6 +272,31 @@ class HandshakeState private constructor(
     private fun nextMessagePattern(): MessagePattern {
         return pattern.messages.getOrNull(messageIndex)
             ?: error("Handshake already complete.")
+    }
+
+    private fun effectiveTokens(messagePattern: MessagePattern, currentMessageIndex: Int): List<HandshakeToken> {
+        val tokens = ArrayList<HandshakeToken>(messagePattern.tokens.size + 2)
+        if (currentMessageIndex == 0 && pskPlacements.contains(0)) {
+            tokens += HandshakeToken.PSK
+        }
+        tokens += messagePattern.tokens
+        if (pskPlacements.contains(currentMessageIndex + 1)) {
+            tokens += HandshakeToken.PSK
+        }
+        return tokens
+    }
+
+    private fun pskPlacementFor(tokenIndex: Int): Int {
+        return if (messageIndex == 0 && tokenIndex == 0 && pskPlacements.contains(0)) {
+            0
+        } else {
+            messageIndex + 1
+        }
+    }
+
+    private fun requirePreSharedKey(placement: Int): ByteArray {
+        return preSharedKeys[placement]?.copyOf()
+            ?: error("Pre-shared key material is required for psk$placement.")
     }
 
     private fun readTokenValue(
@@ -347,12 +380,15 @@ class HandshakeState private constructor(
             cryptoSuite: NoiseCryptoSuite,
             protocolName: String = pattern.protocolName,
             prologue: ByteArray = EMPTY_BYTE_ARRAY,
+            preSharedKeys: Map<Int, ByteArray> = emptyMap(),
             localStatic: NoiseKeyPair? = null,
             localEphemeral: NoiseKeyPair? = null,
             remoteStatic: ByteArray? = null,
             remoteEphemeral: ByteArray? = null,
             ephemeralKeyGenerator: () -> NoiseKeyPair = cryptoSuite.diffieHellman::generateKeyPair
         ): HandshakeState {
+            val pskPlacements = parsePskPlacements(protocolName, pattern.name, pattern.messages.size)
+            validatePreSharedKeys(preSharedKeys, pskPlacements)
             val symmetricState = SymmetricState(
                 hashFunction = cryptoSuite.hash,
                 keyDerivationFunction = cryptoSuite.keyDerivation,
@@ -367,12 +403,58 @@ class HandshakeState private constructor(
                 symmetricState = symmetricState,
                 diffieHellmanFunction = cryptoSuite.diffieHellman,
                 ephemeralKeyGenerator = ephemeralKeyGenerator,
+                preSharedKeys = preSharedKeys.mapValues { (_, value) -> value.copyOf() },
+                pskPlacements = pskPlacements,
                 localStatic = localStatic,
                 localEphemeral = localEphemeral,
                 remoteStatic = remoteStatic,
                 remoteEphemeral = remoteEphemeral
             )
         }
+
+        private fun parsePskPlacements(
+            protocolName: String,
+            expectedPatternName: String,
+            messageCount: Int
+        ): Set<Int> {
+            val patternSegment = protocolName.split('_').getOrNull(1)
+            require(!patternSegment.isNullOrEmpty()) {
+                "Noise protocol names must include a handshake pattern segment."
+            }
+
+            val patternMatch = PROTOCOL_PATTERN_REGEX.matchEntire(patternSegment)
+            require(patternMatch != null) {
+                "Only base patterns and pskN modifiers are currently supported in protocol names."
+            }
+
+            val basePatternName = patternMatch.groupValues[1]
+            require(basePatternName == expectedPatternName) {
+                "Protocol name base pattern $basePatternName does not match selected handshake pattern $expectedPatternName."
+            }
+
+            val placements = """psk(\d+)""".toRegex()
+                .findAll(patternMatch.groupValues[2])
+                .map { match -> match.groupValues[1].toInt() }
+                .toList()
+
+            require(placements.distinct().size == placements.size) { "Duplicate PSK modifiers are not allowed." }
+            require(placements.all { it in 0..messageCount }) {
+                "PSK modifiers must reference positions between 0 and $messageCount."
+            }
+            return placements.toSet()
+        }
+
+        private fun validatePreSharedKeys(preSharedKeys: Map<Int, ByteArray>, pskPlacements: Set<Int>) {
+            val missing = pskPlacements - preSharedKeys.keys
+            require(missing.isEmpty()) { "Missing pre-shared keys for ${missing.sorted().joinToString { "psk$it" }}." }
+
+            val unexpected = preSharedKeys.keys - pskPlacements
+            require(unexpected.isEmpty()) {
+                "Unexpected pre-shared keys provided for ${unexpected.sorted().joinToString { "psk$it" }}."
+            }
+        }
+
+        private val PROTOCOL_PATTERN_REGEX = Regex("^([A-Z]+)((?:psk\\d+)?(?:\\+psk\\d+)*)$")
     }
 }
 

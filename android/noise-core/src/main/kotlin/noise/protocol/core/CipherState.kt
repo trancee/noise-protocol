@@ -35,12 +35,13 @@ class CipherState(
 
     fun decryptWithAd(associatedData: ByteArray, ciphertext: ByteArray): ByteArray {
         val currentKey = key ?: return ciphertext.copyOf()
+        val currentNonce = nextNonce()
         return cipherFunction.decrypt(
             key = currentKey,
-            nonce = consumeNonce(),
+            nonce = currentNonce,
             associatedData = associatedData,
             ciphertext = ciphertext
-        )
+        ).also { nonce += 1uL }
     }
 
     fun rekey() {
@@ -48,7 +49,13 @@ class CipherState(
     }
 
     private fun consumeNonce(): ULong {
+        val currentNonce = nextNonce()
+        nonce += 1uL
+        return currentNonce
+    }
+
+    private fun nextNonce(): ULong {
         check(nonce != ULong.MAX_VALUE) { "CipherState nonce exhausted." }
-        return nonce.also { nonce += 1uL }
+        return nonce
     }
 }

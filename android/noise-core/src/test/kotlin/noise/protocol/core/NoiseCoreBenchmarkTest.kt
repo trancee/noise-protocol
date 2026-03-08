@@ -13,13 +13,7 @@ class NoiseCoreBenchmarkTest {
 
     @Test
     fun measuresHandshakeThroughputAcrossPatterns() {
-        val patterns = listOf(
-            HandshakePattern.NN,
-            HandshakePattern.NK,
-            HandshakePattern.KK,
-            HandshakePattern.IK,
-            HandshakePattern.XX
-        )
+        val patterns = HandshakePattern.entries
 
         patterns.forEach { pattern ->
             runHandshakeRounds(pattern = pattern, rounds = 25)

@@ -6,6 +6,10 @@ private let expectedPatterns: Set<NoiseVectorPattern> = [.NN, .NK, .KK, .IK, .XX
 private let expectedDiffieHellman: Set<NoiseVectorDiffieHellman> = [.x25519, .x448]
 private let expectedCiphers: Set<NoiseVectorCipher> = [.chaChaPoly, .aesGCM]
 private let expectedHashes: Set<NoiseVectorHash> = [.sha256, .sha512, .blake2s, .blake2b]
+private let representativePskVectorIDs: Set<String> = [
+    "noise-nnpsk0-25519-chachapoly-sha256",
+    "noise-xxpsk2-25519-chachapoly-sha256"
+]
 
 @Test("Fixture loader decodes shared v1 vector")
 func fixtureLoaderDecodesSharedVector() throws {
@@ -47,6 +51,42 @@ func deterministicExecutionMatchesExpectedArtifactsForSharedVector() async throw
     #expect(result.splitTransportKeys.responder.rxHex.lowercased() == fixture.expected.splitTransportKeys.responder.rx.lowercased())
 }
 
+@Test("Deterministic execution matches expected artifacts for representative PSK fixtures")
+func deterministicExecutionMatchesExpectedArtifactsForRepresentativePskFixtures() async throws {
+    let loader = NoiseVectorFixtureLoader()
+    let runner = NoiseVectorRunner()
+
+    for vectorID in representativePskVectorIDs.sorted() {
+        let fixture = try loader.loadFixture(vectorID: vectorID)
+        let result = try await runner.verifyExpected(fixture)
+
+        #expect(result.handshakeMessages.count == fixture.expected.handshakeMessages.count)
+        #expect(result.handshakeHashHex.lowercased() == fixture.expected.handshakeHash.lowercased())
+    }
+}
+
+@Test("Deterministic execution matches expected artifacts for representative 448 fixture")
+func deterministicExecutionMatchesExpectedArtifactsForRepresentative448Fixture() async throws {
+    let fixture = try NoiseVectorFixtureLoader().loadFixture(fileName: "noise-nn-448-chachapoly-sha256.json")
+    let runner = NoiseVectorRunner()
+
+    let result = try await runner.verifyExpected(fixture)
+
+    #expect(result.handshakeMessages.count == fixture.expected.handshakeMessages.count)
+    #expect(result.handshakeHashHex.lowercased() == fixture.expected.handshakeHash.lowercased())
+}
+
+@Test("Deterministic execution matches expected artifacts for representative BLAKE2 fixture")
+func deterministicExecutionMatchesExpectedArtifactsForRepresentativeBlake2Fixture() async throws {
+    let fixture = try NoiseVectorFixtureLoader().loadFixture(fileName: "noise-nn-25519-chachapoly-blake2s.json")
+    let runner = NoiseVectorRunner()
+
+    let result = try await runner.verifyExpected(fixture)
+
+    #expect(result.handshakeMessages.count == fixture.expected.handshakeMessages.count)
+    #expect(result.handshakeHashHex.lowercased() == fixture.expected.handshakeHash.lowercased())
+}
+
 @Test("Fixture repository caches corpus and supports indexed lookup")
 func fixtureRepositoryCachesCorpusAndSupportsIndexedLookup() async throws {
     let repository = NoiseVectorFixtureRepository()
@@ -55,17 +95,21 @@ func fixtureRepositoryCachesCorpusAndSupportsIndexedLookup() async throws {
     let secondCatalog = try await repository.catalog()
 
     #expect(firstCatalog == secondCatalog)
-    #expect(try await repository.fixtures().count == 80)
-    #expect(try await repository.filter(pattern: .NN).count == 16)
+    #expect(try await repository.fixtures().count == 82)
+    #expect(try await repository.filter(pattern: .NN).count == 17)
     #expect(
         try await repository.filter(
             pattern: .NN,
-            diffieHellman: .x25519,
+            diffieHellman: .x448,
             cipher: .chaChaPoly,
             hash: .sha256
         ).count == 1
     )
     #expect(try await repository.fixture(vectorID: "noise-nn-placeholder").vectorID == "noise-nn-placeholder")
+    #expect(
+        try await repository.fixture(vectorID: "noise-nnpsk0-25519-chachapoly-sha256").vectorID
+            == "noise-nnpsk0-25519-chachapoly-sha256"
+    )
 }
 
 @Test("Negative-case hooks detect tamper and ordering failures")
@@ -104,7 +148,7 @@ func runnerReportsSupportedSharedFixtures() async throws {
 
     let supported = try await runner.supportedFixtures(repository: repository)
 
-    #expect(supported.count == 20)
+    #expect(supported.count == 82)
     for fixture in supported {
         #expect(await runner.supports(fixture))
     }
@@ -113,7 +157,12 @@ func runnerReportsSupportedSharedFixtures() async throws {
 @Test("Fixture corpus covers full pattern and suite matrix")
 func fixtureCorpusCoversFullPatternAndSuiteMatrix() throws {
     let fixtures = try NoiseVectorFixtureLoader().loadFixtures()
-    #expect(fixtures.count == 80)
+    let baseFixtures = fixtures.filter { ($0.inputs.preSharedKeys ?? [:]).isEmpty }
+    let pskFixtures = fixtures.filter { !(($0.inputs.preSharedKeys ?? [:]).isEmpty) }
+
+    #expect(fixtures.count == 82)
+    #expect(baseFixtures.count == 80)
+    #expect(Set(pskFixtures.map(\.vectorID)) == representativePskVectorIDs)
 
     struct CoverageKey: Hashable {
         let pattern: NoiseVectorPattern
@@ -122,7 +171,7 @@ func fixtureCorpusCoversFullPatternAndSuiteMatrix() throws {
         let hash: NoiseVectorHash
     }
 
-    let coverage = Dictionary(grouping: fixtures) { fixture in
+    let coverage = Dictionary(grouping: baseFixtures) { fixture in
         CoverageKey(
             pattern: fixture.protocolInfo.pattern,
             dh: fixture.protocolInfo.suite.dh,
@@ -149,9 +198,19 @@ func deterministicExecutionValidatesAllSupportedFixtures() async throws {
     let repository = NoiseVectorFixtureRepository()
     let runner = NoiseVectorRunner()
     let fixtures = try await runner.supportedFixtures(repository: repository)
-    #expect(fixtures.count == 20)
+    #expect(fixtures.count == 82)
 
     for fixture in fixtures {
         _ = try await runner.verifyExpected(fixture)
     }
+}
+
+@Test("Fixture loader decodes representative PSK vector")
+func fixtureLoaderDecodesRepresentativePskVector() throws {
+    let fixture = try NoiseVectorFixtureLoader().loadFixture(fileName: "noise-nnpsk0-25519-chachapoly-sha256.json")
+
+    #expect(fixture.protocolInfo.name == "Noise_NNpsk0_25519_ChaChaPoly_SHA256")
+    #expect(fixture.inputs.preSharedKeys == [
+        "psk0": "00112233445566778899aabbccddeefffedcba98765432100123456789abcdef"
+    ])
 }

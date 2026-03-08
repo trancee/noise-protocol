@@ -10,101 +10,186 @@ import kotlin.math.max
 class NoiseCoreStubTest {
     private val fakeCryptoSuite = FakeNoiseCryptoSuite()
 
+    private data class ExpectedPatternDefinition(
+        val preMessages: List<PreMessagePattern>,
+        val messages: List<MessagePattern>
+    )
+
     @Test
     fun supportsNoisePatternsWithExpectedTokenTables() {
-        assertEquals(
-            setOf(
-                HandshakePattern.NN,
-                HandshakePattern.NK,
-                HandshakePattern.KK,
-                HandshakePattern.IK,
-                HandshakePattern.XX
+        val expectedDefinitions = mapOf(
+            HandshakePattern.N to ExpectedPatternDefinition(
+                preMessages = listOf(
+                    PreMessagePattern(MessageDirection.RESPONDER_TO_INITIATOR, listOf(HandshakeToken.S))
+                ),
+                messages = listOf(
+                    MessagePattern(MessageDirection.INITIATOR_TO_RESPONDER, listOf(HandshakeToken.E, HandshakeToken.ES))
+                )
             ),
+            HandshakePattern.K to ExpectedPatternDefinition(
+                preMessages = listOf(
+                    PreMessagePattern(MessageDirection.INITIATOR_TO_RESPONDER, listOf(HandshakeToken.S)),
+                    PreMessagePattern(MessageDirection.RESPONDER_TO_INITIATOR, listOf(HandshakeToken.S))
+                ),
+                messages = listOf(
+                    MessagePattern(
+                        MessageDirection.INITIATOR_TO_RESPONDER,
+                        listOf(HandshakeToken.E, HandshakeToken.ES, HandshakeToken.SS)
+                    )
+                )
+            ),
+            HandshakePattern.X to ExpectedPatternDefinition(
+                preMessages = listOf(
+                    PreMessagePattern(MessageDirection.RESPONDER_TO_INITIATOR, listOf(HandshakeToken.S))
+                ),
+                messages = listOf(
+                    MessagePattern(
+                        MessageDirection.INITIATOR_TO_RESPONDER,
+                        listOf(HandshakeToken.E, HandshakeToken.ES, HandshakeToken.S, HandshakeToken.SS)
+                    )
+                )
+            ),
+            HandshakePattern.NN to ExpectedPatternDefinition(
+                preMessages = emptyList(),
+                messages = listOf(
+                    MessagePattern(MessageDirection.INITIATOR_TO_RESPONDER, listOf(HandshakeToken.E)),
+                    MessagePattern(MessageDirection.RESPONDER_TO_INITIATOR, listOf(HandshakeToken.E, HandshakeToken.EE))
+                )
+            ),
+            HandshakePattern.NK to ExpectedPatternDefinition(
+                preMessages = listOf(
+                    PreMessagePattern(MessageDirection.RESPONDER_TO_INITIATOR, listOf(HandshakeToken.S))
+                ),
+                messages = listOf(
+                    MessagePattern(MessageDirection.INITIATOR_TO_RESPONDER, listOf(HandshakeToken.E, HandshakeToken.ES)),
+                    MessagePattern(MessageDirection.RESPONDER_TO_INITIATOR, listOf(HandshakeToken.E, HandshakeToken.EE))
+                )
+            ),
+            HandshakePattern.NX to ExpectedPatternDefinition(
+                preMessages = emptyList(),
+                messages = listOf(
+                    MessagePattern(MessageDirection.INITIATOR_TO_RESPONDER, listOf(HandshakeToken.E)),
+                    MessagePattern(
+                        MessageDirection.RESPONDER_TO_INITIATOR,
+                        listOf(HandshakeToken.E, HandshakeToken.EE, HandshakeToken.S, HandshakeToken.ES)
+                    )
+                )
+            ),
+            HandshakePattern.XN to ExpectedPatternDefinition(
+                preMessages = emptyList(),
+                messages = listOf(
+                    MessagePattern(MessageDirection.INITIATOR_TO_RESPONDER, listOf(HandshakeToken.E)),
+                    MessagePattern(MessageDirection.RESPONDER_TO_INITIATOR, listOf(HandshakeToken.E, HandshakeToken.EE)),
+                    MessagePattern(MessageDirection.INITIATOR_TO_RESPONDER, listOf(HandshakeToken.S, HandshakeToken.SE))
+                )
+            ),
+            HandshakePattern.XK to ExpectedPatternDefinition(
+                preMessages = listOf(
+                    PreMessagePattern(MessageDirection.RESPONDER_TO_INITIATOR, listOf(HandshakeToken.S))
+                ),
+                messages = listOf(
+                    MessagePattern(MessageDirection.INITIATOR_TO_RESPONDER, listOf(HandshakeToken.E, HandshakeToken.ES)),
+                    MessagePattern(MessageDirection.RESPONDER_TO_INITIATOR, listOf(HandshakeToken.E, HandshakeToken.EE)),
+                    MessagePattern(MessageDirection.INITIATOR_TO_RESPONDER, listOf(HandshakeToken.S, HandshakeToken.SE))
+                )
+            ),
+            HandshakePattern.XX to ExpectedPatternDefinition(
+                preMessages = emptyList(),
+                messages = listOf(
+                    MessagePattern(MessageDirection.INITIATOR_TO_RESPONDER, listOf(HandshakeToken.E)),
+                    MessagePattern(
+                        MessageDirection.RESPONDER_TO_INITIATOR,
+                        listOf(HandshakeToken.E, HandshakeToken.EE, HandshakeToken.S, HandshakeToken.ES)
+                    ),
+                    MessagePattern(MessageDirection.INITIATOR_TO_RESPONDER, listOf(HandshakeToken.S, HandshakeToken.SE))
+                )
+            ),
+            HandshakePattern.KN to ExpectedPatternDefinition(
+                preMessages = listOf(
+                    PreMessagePattern(MessageDirection.INITIATOR_TO_RESPONDER, listOf(HandshakeToken.S))
+                ),
+                messages = listOf(
+                    MessagePattern(MessageDirection.INITIATOR_TO_RESPONDER, listOf(HandshakeToken.E)),
+                    MessagePattern(
+                        MessageDirection.RESPONDER_TO_INITIATOR,
+                        listOf(HandshakeToken.E, HandshakeToken.EE, HandshakeToken.SE)
+                    )
+                )
+            ),
+            HandshakePattern.KK to ExpectedPatternDefinition(
+                preMessages = listOf(
+                    PreMessagePattern(MessageDirection.INITIATOR_TO_RESPONDER, listOf(HandshakeToken.S)),
+                    PreMessagePattern(MessageDirection.RESPONDER_TO_INITIATOR, listOf(HandshakeToken.S))
+                ),
+                messages = listOf(
+                    MessagePattern(
+                        MessageDirection.INITIATOR_TO_RESPONDER,
+                        listOf(HandshakeToken.E, HandshakeToken.ES, HandshakeToken.SS)
+                    ),
+                    MessagePattern(
+                        MessageDirection.RESPONDER_TO_INITIATOR,
+                        listOf(HandshakeToken.E, HandshakeToken.EE, HandshakeToken.SE)
+                    )
+                )
+            ),
+            HandshakePattern.KX to ExpectedPatternDefinition(
+                preMessages = listOf(
+                    PreMessagePattern(MessageDirection.INITIATOR_TO_RESPONDER, listOf(HandshakeToken.S))
+                ),
+                messages = listOf(
+                    MessagePattern(MessageDirection.INITIATOR_TO_RESPONDER, listOf(HandshakeToken.E)),
+                    MessagePattern(
+                        MessageDirection.RESPONDER_TO_INITIATOR,
+                        listOf(HandshakeToken.E, HandshakeToken.EE, HandshakeToken.SE, HandshakeToken.S, HandshakeToken.ES)
+                    )
+                )
+            ),
+            HandshakePattern.IN to ExpectedPatternDefinition(
+                preMessages = emptyList(),
+                messages = listOf(
+                    MessagePattern(MessageDirection.INITIATOR_TO_RESPONDER, listOf(HandshakeToken.E, HandshakeToken.S)),
+                    MessagePattern(
+                        MessageDirection.RESPONDER_TO_INITIATOR,
+                        listOf(HandshakeToken.E, HandshakeToken.EE, HandshakeToken.SE)
+                    )
+                )
+            ),
+            HandshakePattern.IK to ExpectedPatternDefinition(
+                preMessages = listOf(
+                    PreMessagePattern(MessageDirection.RESPONDER_TO_INITIATOR, listOf(HandshakeToken.S))
+                ),
+                messages = listOf(
+                    MessagePattern(
+                        MessageDirection.INITIATOR_TO_RESPONDER,
+                        listOf(HandshakeToken.E, HandshakeToken.ES, HandshakeToken.S, HandshakeToken.SS)
+                    ),
+                    MessagePattern(
+                        MessageDirection.RESPONDER_TO_INITIATOR,
+                        listOf(HandshakeToken.E, HandshakeToken.EE, HandshakeToken.SE)
+                    )
+                )
+            ),
+            HandshakePattern.IX to ExpectedPatternDefinition(
+                preMessages = emptyList(),
+                messages = listOf(
+                    MessagePattern(MessageDirection.INITIATOR_TO_RESPONDER, listOf(HandshakeToken.E, HandshakeToken.S)),
+                    MessagePattern(
+                        MessageDirection.RESPONDER_TO_INITIATOR,
+                        listOf(HandshakeToken.E, HandshakeToken.EE, HandshakeToken.SE, HandshakeToken.S, HandshakeToken.ES)
+                    )
+                )
+            )
+        )
+
+        assertEquals(
+            expectedDefinitions.keys,
             NoiseCoreStub.supportedPatterns()
         )
 
-        assertEquals(
-            emptyList<PreMessagePattern>(),
-            HandshakePattern.NN.preMessages
-        )
-        assertEquals(
-            listOf(
-                MessagePattern(MessageDirection.INITIATOR_TO_RESPONDER, listOf(HandshakeToken.E)),
-                MessagePattern(MessageDirection.RESPONDER_TO_INITIATOR, listOf(HandshakeToken.E, HandshakeToken.EE))
-            ),
-            HandshakePattern.NN.messages
-        )
-
-        assertEquals(
-            listOf(
-                PreMessagePattern(MessageDirection.RESPONDER_TO_INITIATOR, listOf(HandshakeToken.S))
-            ),
-            HandshakePattern.NK.preMessages
-        )
-        assertEquals(
-            listOf(
-                MessagePattern(MessageDirection.INITIATOR_TO_RESPONDER, listOf(HandshakeToken.E, HandshakeToken.ES)),
-                MessagePattern(MessageDirection.RESPONDER_TO_INITIATOR, listOf(HandshakeToken.E, HandshakeToken.EE))
-            ),
-            HandshakePattern.NK.messages
-        )
-
-        assertEquals(
-            listOf(
-                PreMessagePattern(MessageDirection.INITIATOR_TO_RESPONDER, listOf(HandshakeToken.S)),
-                PreMessagePattern(MessageDirection.RESPONDER_TO_INITIATOR, listOf(HandshakeToken.S))
-            ),
-            HandshakePattern.KK.preMessages
-        )
-        assertEquals(
-            listOf(
-                MessagePattern(
-                    MessageDirection.INITIATOR_TO_RESPONDER,
-                    listOf(HandshakeToken.E, HandshakeToken.ES, HandshakeToken.SS)
-                ),
-                MessagePattern(
-                    MessageDirection.RESPONDER_TO_INITIATOR,
-                    listOf(HandshakeToken.E, HandshakeToken.EE, HandshakeToken.SE)
-                )
-            ),
-            HandshakePattern.KK.messages
-        )
-
-        assertEquals(
-            listOf(
-                PreMessagePattern(MessageDirection.RESPONDER_TO_INITIATOR, listOf(HandshakeToken.S))
-            ),
-            HandshakePattern.IK.preMessages
-        )
-        assertEquals(
-            listOf(
-                MessagePattern(
-                    MessageDirection.INITIATOR_TO_RESPONDER,
-                    listOf(HandshakeToken.E, HandshakeToken.ES, HandshakeToken.S, HandshakeToken.SS)
-                ),
-                MessagePattern(
-                    MessageDirection.RESPONDER_TO_INITIATOR,
-                    listOf(HandshakeToken.E, HandshakeToken.EE, HandshakeToken.SE)
-                )
-            ),
-            HandshakePattern.IK.messages
-        )
-
-        assertEquals(
-            emptyList<PreMessagePattern>(),
-            HandshakePattern.XX.preMessages
-        )
-        assertEquals(
-            listOf(
-                MessagePattern(MessageDirection.INITIATOR_TO_RESPONDER, listOf(HandshakeToken.E)),
-                MessagePattern(
-                    MessageDirection.RESPONDER_TO_INITIATOR,
-                    listOf(HandshakeToken.E, HandshakeToken.EE, HandshakeToken.S, HandshakeToken.ES)
-                ),
-                MessagePattern(MessageDirection.INITIATOR_TO_RESPONDER, listOf(HandshakeToken.S, HandshakeToken.SE))
-            ),
-            HandshakePattern.XX.messages
-        )
+        expectedDefinitions.forEach { (pattern, expected) ->
+            assertEquals(expected.preMessages, pattern.preMessages)
+            assertEquals(expected.messages, pattern.messages)
+        }
     }
 
     @Test
@@ -186,6 +271,25 @@ class NoiseCoreStubTest {
     }
 
     @Test
+    fun cipherStateDoesNotAdvanceNonceWhenDecryptFails() {
+        val cipherState = CipherState(fakeCryptoSuite.cipher, initialKey = byteArrayOf(7, 9, 11))
+
+        val failure = assertThrows(IllegalArgumentException::class.java) {
+            cipherState.decryptWithAd(byteArrayOf(1, 2), byteArrayOf(3, 4, 5))
+        }
+
+        assertEquals("Fake authentication failed.", failure.message)
+        assertEquals(0uL, cipherState.nonce)
+
+        val validCiphertext = cipherState.encryptWithAd(byteArrayOf(1, 2), byteArrayOf(9, 8, 7))
+        assertEquals(1uL, cipherState.nonce)
+
+        val receiver = CipherState(fakeCryptoSuite.cipher, initialKey = byteArrayOf(7, 9, 11))
+        assertArrayEquals(byteArrayOf(9, 8, 7), receiver.decryptWithAd(byteArrayOf(1, 2), validCiphertext))
+        assertEquals(1uL, receiver.nonce)
+    }
+
+    @Test
     fun symmetricStateIsDeterministicWithFakeCrypto() {
         val sender = SymmetricState(
             hashFunction = fakeCryptoSuite.hash,
@@ -217,6 +321,32 @@ class NoiseCoreStubTest {
 
         assertArrayEquals(requireNotNull(senderTx.keyMaterial()), requireNotNull(receiverTx.keyMaterial()))
         assertArrayEquals(requireNotNull(senderRx.keyMaterial()), requireNotNull(receiverRx.keyMaterial()))
+    }
+
+    @Test
+    fun symmetricStateMixKeyAndHashIsDeterministic() {
+        val sender = SymmetricState(
+            hashFunction = fakeCryptoSuite.hash,
+            keyDerivationFunction = fakeCryptoSuite.keyDerivation,
+            cipherFunction = fakeCryptoSuite.cipher,
+            protocolName = "Noise_XXpsk2_25519_AESGCM_SHA256"
+        )
+        val receiver = SymmetricState(
+            hashFunction = fakeCryptoSuite.hash,
+            keyDerivationFunction = fakeCryptoSuite.keyDerivation,
+            cipherFunction = fakeCryptoSuite.cipher,
+            protocolName = "Noise_XXpsk2_25519_AESGCM_SHA256"
+        )
+
+        sender.mixKeyAndHash(byteArrayOf(9, 8, 7, 6))
+        receiver.mixKeyAndHash(byteArrayOf(9, 8, 7, 6))
+
+        val ciphertext = sender.encryptAndHash("payload".encodeToByteArray())
+        val plaintext = receiver.decryptAndHash(ciphertext)
+
+        assertArrayEquals("payload".encodeToByteArray(), plaintext)
+        assertArrayEquals(sender.handshakeHash, receiver.handshakeHash)
+        assertArrayEquals(sender.chainingKey, receiver.chainingKey)
     }
 
     @Test
@@ -300,6 +430,105 @@ class NoiseCoreStubTest {
         assertEquals(null, responder.expectedDirection())
         assertTrue(initiator.isComplete())
         assertTrue(responder.isComplete())
+    }
+
+    @Test
+    fun handshakeStateSupportsPskModifiersFromProtocolName() {
+        val protocolName = "Noise_XXpsk0+psk2_25519_AESGCM_SHA256"
+        val preSharedKeys = mapOf(
+            0 to byteArrayOf(1, 3, 5, 7),
+            2 to byteArrayOf(2, 4, 6, 8)
+        )
+
+        val initiator = HandshakeState.initialize(
+            pattern = HandshakePattern.XX,
+            role = HandshakeRole.INITIATOR,
+            cryptoSuite = fakeCryptoSuite,
+            protocolName = protocolName,
+            preSharedKeys = preSharedKeys,
+            localStatic = keyPair(10),
+            ephemeralKeyGenerator = { keyPair(11) }
+        )
+        val responder = HandshakeState.initialize(
+            pattern = HandshakePattern.XX,
+            role = HandshakeRole.RESPONDER,
+            cryptoSuite = fakeCryptoSuite,
+            protocolName = protocolName,
+            preSharedKeys = preSharedKeys,
+            localStatic = keyPair(20),
+            ephemeralKeyGenerator = { keyPair(21) }
+        )
+
+        assertEquals(listOf(HandshakeToken.E), initiator.expectedTokenPayloads())
+        val message1 = initiator.writeMessage("one".encodeToByteArray())
+        assertEquals(listOf(HandshakeToken.E), message1.tokenValues.map { it.token })
+        assertArrayEquals("one".encodeToByteArray(), responder.readMessage(message1))
+
+        assertEquals(listOf(HandshakeToken.E, HandshakeToken.S), responder.expectedTokenPayloads())
+        val message2 = responder.writeMessage("two".encodeToByteArray())
+        assertEquals(listOf(HandshakeToken.E, HandshakeToken.S), message2.tokenValues.map { it.token })
+        assertArrayEquals("two".encodeToByteArray(), initiator.readMessage(message2))
+
+        assertEquals(listOf(HandshakeToken.S), initiator.expectedTokenPayloads())
+        val message3 = initiator.writeMessage("three".encodeToByteArray())
+        assertEquals(listOf(HandshakeToken.S), message3.tokenValues.map { it.token })
+        assertArrayEquals("three".encodeToByteArray(), responder.readMessage(message3))
+
+        assertTrue(initiator.isComplete())
+        assertTrue(responder.isComplete())
+        assertArrayEquals(initiator.handshakeHash(), responder.handshakeHash())
+    }
+
+    @Test
+    fun handshakeStateRejectsMissingPskMaterial() {
+        val error = assertThrows(IllegalArgumentException::class.java) {
+            HandshakeState.initialize(
+                pattern = HandshakePattern.NN,
+                role = HandshakeRole.INITIATOR,
+                cryptoSuite = fakeCryptoSuite,
+                protocolName = "Noise_NNpsk0_25519_AESGCM_SHA256",
+                ephemeralKeyGenerator = { keyPair(1) }
+            )
+        }
+
+        assertEquals("Missing pre-shared keys for psk0.", error.message)
+    }
+
+    @Test
+    fun handshakeStateRejectsUnsupportedProtocolNameModifiers() {
+        val error = assertThrows(IllegalArgumentException::class.java) {
+            HandshakeState.initialize(
+                pattern = HandshakePattern.XX,
+                role = HandshakeRole.INITIATOR,
+                cryptoSuite = fakeCryptoSuite,
+                protocolName = "Noise_XXfallback_25519_AESGCM_SHA256",
+                localStatic = keyPair(41),
+                ephemeralKeyGenerator = { keyPair(42) }
+            )
+        }
+
+        assertEquals(
+            "Only base patterns and pskN modifiers are currently supported in protocol names.",
+            error.message
+        )
+    }
+
+    @Test
+    fun handshakeStateRejectsProtocolNamePatternMismatches() {
+        val error = assertThrows(IllegalArgumentException::class.java) {
+            HandshakeState.initialize(
+                pattern = HandshakePattern.NN,
+                role = HandshakeRole.INITIATOR,
+                cryptoSuite = fakeCryptoSuite,
+                protocolName = "Noise_XX_25519_AESGCM_SHA256",
+                ephemeralKeyGenerator = { keyPair(52) }
+            )
+        }
+
+        assertEquals(
+            "Protocol name base pattern XX does not match selected handshake pattern NN.",
+            error.message
+        )
     }
 
     private class FakeNoiseCryptoSuite : NoiseCryptoSuite {

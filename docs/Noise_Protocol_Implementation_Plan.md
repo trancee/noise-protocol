@@ -3,6 +3,7 @@
 ## 0. Goals (non-negotiable)
 
 - 100% compliant with Noise Protocol Framework (Rev 34)
+- Versioned upstream Noise spec lock with automated drift detection against https://noiseprotocol.org/noise.html
 - Deterministic, byte-for-byte compatible across platforms
 - No protocol shortcuts
 - Cryptographic primitives fully swappable
@@ -37,26 +38,28 @@
 ### Version pinning process (offline-safe)
 
 1. During scaffolding/release prep, verify latest stable versions from official Android, Gradle, Swift, and Xcode release sources.
-2. Pin exact versions in code (single commit/PR):  
+2. During the same maintenance pass, verify the tracked upstream Noise baseline with `bash ./scripts/verify-noise-spec-upstream.sh`.
+3. If the Noise spec metadata changed, update `noise-spec.lock`, `docs/Noise_Protocol_Upstream_Tracking.md`, and any impacted implementation/tests in one PR.
+4. Pin exact versions in code (single commit/PR):  
    - Android: `android/gradle/wrapper/gradle-wrapper.properties`, `android/gradle/libs.versions.toml`, and build-logic/module Gradle files that set `minSdk`/`targetSdk`/`compileSdk` and JVM toolchain.  
    - iOS: `ios/Package.swift` (`swift-tools-version` + package pins), `ios/Package.resolved`, and Xcode/CI config files that declare deployment target and Xcode version.
-3. Keep versions immutable between release bumps (no floating ranges, no branch-based dependency refs).
+5. Keep versions immutable between release bumps (no floating ranges, no branch-based dependency refs).
 
 
-### Android bootstrap usage (current scaffold)
+### Android baseline usage (current release baseline)
 
 - Gradle root: `android/settings.gradle.kts` and `android/build.gradle.kts`
-- Bootstrap modules: `:noise-core`, `:noise-crypto`, `:noise-testing`
-- Build logic is intentionally straightforward for bootstrap (version catalog + module scripts, no convention plugins yet)
+- Main Android modules: `:noise-core`, `:noise-crypto`, `:noise-testing`, `:noise-android`
+- Build logic is intentionally straightforward and version-catalog driven for the current release baseline.
 - Run baseline tests: `cd android && gradle --no-daemon --console=plain :noise-core:test :noise-crypto:test :noise-testing:test`
-- Current Android APIs are compile-safe Kotlin placeholders with no protocol logic yet.
+- Current Android APIs implement the supported Noise core, crypto adapters, test harness, official-vector conversion, and publishable AAR surface described elsewhere in this repository.
 
-### iOS bootstrap usage (current scaffold)
+### iOS baseline usage (current release baseline)
 
 - Swift package manifest: `ios/Package.swift`
 - Bootstrap modules: `NoiseCore`, `NoiseCryptoAdapters`, `NoiseTestHarness`
 - Run baseline tests: `cd ios && swift test`
-- Current iOS APIs are compile-safe placeholders with Swift 6 language mode, Swift tools 6.1, strict concurrency checks, and warnings treated as errors.
+- Current iOS APIs implement the supported Noise core, built-in crypto adapters, test harness, and official-vector conversion flow with Swift 6 language mode, Swift tools 6.1, strict concurrency checks, and warnings treated as errors.
 
 ### Local verification commands (developer workflow)
 
@@ -65,7 +68,7 @@
 - Cross-platform deterministic interop check: `./scripts/verify-cross-platform-interop.sh`
 - Artifact smoke validation (version parity + Android AAR publish shape + root/legacy Swift package checks): `./scripts/verify-artifact-smoke.sh`
 
-### CI validation matrix (current scaffold)
+### CI validation matrix (current release baseline)
 
 - Workflow: `.github/workflows/ci.yml`
 - Android job (`ubuntu-24.04`, Java 21, Gradle 9.4.0): `cd android && gradle --no-daemon --console=plain :noise-core:test :noise-crypto:test :noise-testing:test`

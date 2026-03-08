@@ -220,13 +220,81 @@ The test harness does NOT attempt to:
 - Fixtures must declare `schema_version` and follow the matching major folder: `test-vectors/fixtures/v1/`
 - If the contract changes incompatibly, add a new schema file (`...-v2.schema.json`) and write fixtures under `fixtures/v2/`
 - Each fixture must include protocol metadata, input key material/prologue/payloads, expected handshake outputs (messages/hash/split keys), and negative-case metadata
-- Current v1 corpus covers the full matrix (`80` fixtures):
+- Current v1 corpus includes the full base matrix plus representative PSK-backed fixtures (`82` fixtures total):
   - patterns: `NN`, `NK`, `KK`, `IK`, `XX`
   - DH: `25519`, `448`
   - ciphers: `ChaChaPoly`, `AESGCM`
   - hashes: `SHA256`, `SHA512`, `BLAKE2s`, `BLAKE2b`
+- Additional representative PSK fixtures currently extend the shared contract with:
+  - `Noise_NNpsk0_25519_ChaChaPoly_SHA256`
+  - `Noise_XXpsk2_25519_ChaChaPoly_SHA256`
+- Fixtures may optionally declare `inputs.pre_shared_keys` using `pskN` labels when the protocol name carries PSK modifiers.
 - Fixture file naming for generated matrix vectors is:
   `noise-<pattern-lower>-<dh>-<cipher-lower>-<hash-lower>.json`
+
+### 12.1 Mapping from the Official Noise Wiki Test-Vector Format
+
+The upstream Noise wiki documents a conversation-oriented JSON format at:
+`https://github.com/noiseprotocol/noise_wiki/wiki/Test-vectors`
+
+That format is not consumed directly by this repository today. It is still the right reference for
+understanding how Noise vectors are intended to drive a deterministic handshake and transport transcript.
+
+Field mapping from the official wiki format to this repository's shared fixture format is:
+
+- `protocol_name` -> `protocol.name`
+- Handshake pattern portion of `protocol_name` -> `protocol.pattern`
+- DH / cipher / hash portions of `protocol_name` -> `protocol.suite.{dh,cipher,hash}`
+- `init_prologue` -> `inputs.prologue`
+- `resp_prologue` -> must match `init_prologue` for the current shared fixture contract; the shared schema models one prologue value for both peers.
+- `init_static` / `resp_static` -> `inputs.key_material.{initiator,responder}.static.private`
+- Derived public keys for those private keys -> `inputs.key_material.{initiator,responder}.static.public`
+- `init_ephemeral` / `resp_ephemeral` -> `inputs.key_material.{initiator,responder}.ephemeral.private`
+- Derived public keys for those private keys -> `inputs.key_material.{initiator,responder}.ephemeral.public`
+- `init_psks` / `resp_psks` -> `inputs.pre_shared_keys`, keyed as `psk0`, `psk1`, `psk2`, in protocol-name order
+- `messages[*].payload` -> `inputs.payloads[*].plaintext_hex`
+- Message sender is implicit in the wiki format's alternating order and becomes explicit in `inputs.payloads[*].sender`
+- `messages[*].ciphertext` -> `expected.handshake_messages[*].message_hex` for handshake packets, and is also the basis for expected transport checks in transport-phase extensions
+- `handshake_hash` -> `expected.handshake_hash`
+
+There are also important format differences:
+
+- The official wiki format is conversation-oriented. It models one alternating `messages` array that spans both handshake and transport traffic.
+- This repository's shared schema is implementation-oriented. It separates deterministic inputs from expected outputs and additionally stores split transport keys under `expected.split_transport_keys`.
+- The official wiki format allows `init_prologue` and `resp_prologue` to differ. The current shared contract assumes a single common `inputs.prologue` value.
+- The official wiki format uses per-side PSK arrays. The current shared contract stores PSKs once by placement label because both peers must agree on the same values for a passing case.
+- The official wiki format can represent fallback and hybrid-forward-secrecy metadata via `fallback`, `fallback_pattern`, and `hybrid`. The current shared v1 contract does not model those fields yet.
+- The official wiki format does not make message direction explicit because it is implied by order. The shared contract stores `sender` explicitly so harnesses can validate direction and apply negative-case mutations more directly.
+
+Practical usage guidance for this repository:
+
+- Use the official wiki format as the normative reference for what a Noise vector means.
+- Translate wiki vectors into the shared schema when adding cross-platform deterministic fixtures under `test-vectors/fixtures/v1/`.
+- Derive and store both public keys and split transport keys during translation; those values are required by the local harnesses even though they are not primary fields in the wiki format.
+- Do not treat official wiki fallback or hybrid vectors as directly importable into v1 fixtures; they currently require schema and harness extensions first.
+
+Current compatibility status:
+
+- Directly translatable today: standard deterministic base-pattern vectors and representative `pskN` vectors for currently supported patterns.
+- Not directly representable today: official fallback vectors, hybrid-forward-secrecy vectors, and cases that rely on asymmetric initiator/responder prologues.
+- The Android harness module now includes `OfficialNoiseVectorImporter`, which converts directly translatable official wiki vectors into in-memory shared v1 fixtures, derives missing local public keys from official private-key inputs, verifies handshake ciphertexts and handshake hashes against the official transcript, and synthesizes split transport keys plus standard negative cases for the local harness contract.
+- Regression coverage now round-trips representative `Noise_NNpsk0_25519_ChaChaPoly_SHA256` and `Noise_XXpsk2_25519_ChaChaPoly_SHA256` fixtures through the importer, including both singular (`init_psk` / `resp_psk`) and plural (`init_psks` / `resp_psks`) official PSK field spellings.
+- Imported key pairs follow the active DH adapter's normalization rules when deriving public keys from official private-key inputs, so private scalar bytes may be clamped relative to fixture seed material even when the resulting public keys and handshake artifacts match.
+- Importer regression coverage also locks in the current rejection behavior for unsupported `hybrid` vectors, asymmetric initiator/responder prologues, mismatched initiator/responder PSK value or count inputs, mismatched `init_remote_static` / `resp_remote_static`, and mismatched official handshake `ciphertext` / `handshake_hash` values.
+- The Android harness module now also includes `OfficialNoiseVectorConverter`, which persists directly translatable official wiki vectors as canonical shared v1 fixture JSON files using `NoiseVectorFixtureWriter`.
+- The iOS `NoiseTestHarness` target now also includes `OfficialNoiseVectorConverter` and `NoiseVectorFixtureWriter` for directly translatable official wiki vectors on the built-in iOS DH set (`25519` and `448`), using the existing Swift runner to derive canonical shared-fixture expectations before persistence.
+- Swift Testing coverage now round-trips representative `Noise_NNpsk0_25519_ChaChaPoly_SHA256`, `Noise_XXpsk2_25519_ChaChaPoly_SHA256`, `Noise_NN_448_ChaChaPoly_SHA256`, and `Noise_NN_25519_ChaChaPoly_BLAKE2s` official-format documents through the iOS converter; the repository iOS wrapper smoke test also covers the representative `448` and `BLAKE2s` paths.
+- The iOS package also exposes this conversion path through `swift run NoiseVectorConverterCLI --input <path> --output-dir <path> [--schema-path <path>]`, with a repository wrapper at `scripts/convert-official-noise-vectors-ios.sh` and a smoke test in `scripts/test-convert-official-noise-vectors-ios.sh`.
+- The repository also includes `scripts/verify-official-vector-conversion-parity.sh`, which converts the same official input on Android and iOS and compares the semantically important shared-fixture fields across both generated outputs for representative `Noise_NN_25519_ChaChaPoly_SHA256`, `Noise_NN_448_ChaChaPoly_SHA256`, `Noise_NN_25519_ChaChaPoly_BLAKE2s`, `Noise_NNpsk0_25519_ChaChaPoly_SHA256`, and `Noise_XXpsk2_25519_ChaChaPoly_SHA256` samples under `scripts/testdata/`.
+- `scripts/verify-cross-platform-interop.sh` now also runs representative deterministic shared-fixture execution for `Noise_NN_448_ChaChaPoly_SHA256` and `Noise_NN_25519_ChaChaPoly_BLAKE2s` on both Android and iOS before the official conversion parity step.
+- With built-in `25519`, `448`, `SHA256`, `SHA512`, `BLAKE2s`, and `BLAKE2b` support now available on iOS, `NoiseVectorRunner.supportedFixtures(...)` covers the full shared 82-fixture corpus on both platforms.
+- Swift Testing regression coverage now also locks in the iOS converter's rejection behavior for unsupported `hybrid` vectors, asymmetric prologues, mismatched initiator/responder PSK values or counts, mismatched `init_remote_static` / `resp_remote_static`, and mismatched official handshake `ciphertext` / `handshake_hash` values.
+- The Android module exposes this persisted conversion path through `:noise-testing:convertOfficialNoiseVectors`, using Gradle properties:
+  `-PofficialNoiseInput=/absolute/path/to/official-vectors.json`
+  `-PofficialNoiseOutput=/absolute/path/to/output-directory`
+  optional `-PofficialNoiseSchema=../../schema/noise-vector-v1.schema.json`
+- A repository wrapper script is also available at `scripts/convert-official-noise-vectors.sh`, with a smoke test in `scripts/test-convert-official-noise-vectors.sh` and sample official input in `scripts/testdata/official-noise-nn-vector.json`.
+- That wrapper resolves repo-relative input and output paths before invoking the Android Gradle task, so it is safe to call from the repository root with relative paths.
 
 ---
 
@@ -268,4 +336,4 @@ The test harness does NOT attempt to:
 ## 15. Cross-Platform Interop Verification Command
 
 - Run `./scripts/verify-cross-platform-interop.sh` from the repository root.
-- The command executes Android and iOS fixture-expected artifact checks against the same shared vector (`noise-nn-placeholder`) and fails if either platform diverges on handshake messages, handshake hash, or split keys.
+- The command executes Android and iOS fixture-expected artifact checks against the canonical baseline shared vector fixture (`noise-nn-placeholder`) plus representative PSK-backed shared vectors (`noise-nnpsk0-25519-chachapoly-sha256` and `noise-xxpsk2-25519-chachapoly-sha256`) and fails if either platform diverges on handshake messages, handshake hash, or split keys.

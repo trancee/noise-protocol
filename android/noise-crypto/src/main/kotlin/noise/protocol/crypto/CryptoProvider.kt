@@ -110,5 +110,8 @@ data class DefaultNoiseCryptoSuite(
     override val diffieHellman: NoiseDiffieHellmanFunction
 ) : NoiseCryptoSuite
 
-@Deprecated("Use CryptoProvider.")
+@Deprecated(
+    message = "Use CryptoProvider.",
+    replaceWith = ReplaceWith("CryptoProvider")
+)
 typealias PlaceholderCryptoProvider = CryptoProvider
