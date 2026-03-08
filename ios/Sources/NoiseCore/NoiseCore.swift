@@ -47,8 +47,15 @@ public struct NoiseProtocolDescriptor: Sendable, Hashable {
 public enum NoiseHandshakePatternName: String, Sendable, CaseIterable {
     case nn = "NN"
     case nk = "NK"
+    case nx = "NX"
+    case xn = "XN"
+    case xk = "XK"
+    case kn = "KN"
     case kk = "KK"
+    case kx = "KX"
+    case `in` = "IN"
     case ik = "IK"
+    case ix = "IX"
     case xx = "XX"
 
     public init?(protocolDescriptor: NoiseProtocolDescriptor) {
@@ -130,6 +137,48 @@ public enum NoiseHandshakePatterns {
         ]
     )
 
+    public static let nx = NoiseHandshakePatternDefinition(
+        name: .nx,
+        preMessages: [],
+        messages: [
+            NoisePatternMessage(direction: .initiatorToResponder, tokens: [.e]),
+            NoisePatternMessage(direction: .responderToInitiator, tokens: [.e, .ee, .s, .es]),
+        ]
+    )
+
+    public static let xn = NoiseHandshakePatternDefinition(
+        name: .xn,
+        preMessages: [],
+        messages: [
+            NoisePatternMessage(direction: .initiatorToResponder, tokens: [.e]),
+            NoisePatternMessage(direction: .responderToInitiator, tokens: [.e, .ee]),
+            NoisePatternMessage(direction: .initiatorToResponder, tokens: [.s, .se]),
+        ]
+    )
+
+    public static let xk = NoiseHandshakePatternDefinition(
+        name: .xk,
+        preMessages: [
+            NoisePatternMessage(direction: .responderToInitiator, tokens: [.s]),
+        ],
+        messages: [
+            NoisePatternMessage(direction: .initiatorToResponder, tokens: [.e, .es]),
+            NoisePatternMessage(direction: .responderToInitiator, tokens: [.e, .ee]),
+            NoisePatternMessage(direction: .initiatorToResponder, tokens: [.s, .se]),
+        ]
+    )
+
+    public static let kn = NoiseHandshakePatternDefinition(
+        name: .kn,
+        preMessages: [
+            NoisePatternMessage(direction: .initiatorToResponder, tokens: [.s]),
+        ],
+        messages: [
+            NoisePatternMessage(direction: .initiatorToResponder, tokens: [.e]),
+            NoisePatternMessage(direction: .responderToInitiator, tokens: [.e, .ee, .se]),
+        ]
+    )
+
     public static let kk = NoiseHandshakePatternDefinition(
         name: .kk,
         preMessages: [
@@ -138,6 +187,26 @@ public enum NoiseHandshakePatterns {
         ],
         messages: [
             NoisePatternMessage(direction: .initiatorToResponder, tokens: [.e, .es, .ss]),
+            NoisePatternMessage(direction: .responderToInitiator, tokens: [.e, .ee, .se]),
+        ]
+    )
+
+    public static let kx = NoiseHandshakePatternDefinition(
+        name: .kx,
+        preMessages: [
+            NoisePatternMessage(direction: .initiatorToResponder, tokens: [.s]),
+        ],
+        messages: [
+            NoisePatternMessage(direction: .initiatorToResponder, tokens: [.e]),
+            NoisePatternMessage(direction: .responderToInitiator, tokens: [.e, .ee, .se, .s, .es]),
+        ]
+    )
+
+    public static let `in` = NoiseHandshakePatternDefinition(
+        name: .in,
+        preMessages: [],
+        messages: [
+            NoisePatternMessage(direction: .initiatorToResponder, tokens: [.e, .s]),
             NoisePatternMessage(direction: .responderToInitiator, tokens: [.e, .ee, .se]),
         ]
     )
@@ -153,6 +222,15 @@ public enum NoiseHandshakePatterns {
         ]
     )
 
+    public static let ix = NoiseHandshakePatternDefinition(
+        name: .ix,
+        preMessages: [],
+        messages: [
+            NoisePatternMessage(direction: .initiatorToResponder, tokens: [.e, .s]),
+            NoisePatternMessage(direction: .responderToInitiator, tokens: [.e, .ee, .se, .s, .es]),
+        ]
+    )
+
     public static let xx = NoiseHandshakePatternDefinition(
         name: .xx,
         preMessages: [],
@@ -163,7 +241,7 @@ public enum NoiseHandshakePatterns {
         ]
     )
 
-    public static let all: [NoiseHandshakePatternDefinition] = [nn, nk, kk, ik, xx]
+    public static let all: [NoiseHandshakePatternDefinition] = [nn, nk, nx, xn, xk, xx, kn, kk, kx, `in`, ik, ix]
 
     public static func pattern(named name: NoiseHandshakePatternName) -> NoiseHandshakePatternDefinition {
         switch name {
@@ -171,10 +249,24 @@ public enum NoiseHandshakePatterns {
             return nn
         case .nk:
             return nk
+        case .nx:
+            return nx
+        case .xn:
+            return xn
+        case .xk:
+            return xk
+        case .kn:
+            return kn
         case .kk:
             return kk
+        case .kx:
+            return kx
+        case .in:
+            return `in`
         case .ik:
             return ik
+        case .ix:
+            return ix
         case .xx:
             return xx
         }

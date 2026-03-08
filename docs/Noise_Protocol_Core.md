@@ -9,18 +9,35 @@ This document defines **protocol logic only**. It must not reference any concret
 
 - Noise_NN
 - Noise_NK
+- Noise_NX
+- Noise_XN
+- Noise_XK
+- Noise_KN
 - Noise_KK
+- Noise_KX
+- Noise_IN
 - Noise_IK
+- Noise_IX
 - Noise_XX
 
 Handshake pattern tables (strictly ordered):
 - NN: `-> e`, `<- e, ee`
 - NK: `<- s` (pre-message), `-> e, es`, `<- e, ee`
+- NX: `-> e`, `<- e, ee, s, es`
+- XN: `-> e`, `<- e, ee`, `-> s, se`
+- XK: `<- s` (pre-message), `-> e, es`, `<- e, ee`, `-> s, se`
+- KN: `-> s` (pre-message), `-> e`, `<- e, ee, se`
 - KK: `-> s`, `<- s` (pre-messages), `-> e, es, ss`, `<- e, ee, se`
+- KX: `-> s` (pre-message), `-> e`, `<- e, ee, se, s, es`
+- IN: `-> e, s`, `<- e, ee, se`
 - IK: `<- s` (pre-message), `-> e, es, s, ss`, `<- e, ee, se`
+- IX: `-> e, s`, `<- e, ee, se, s, es`
 - XX: `-> e`, `<- e, ee, s, es`, `-> s, se`
 
 Order is strict and table-driven.
+
+Shared vector note:
+- The shared repository vector corpus currently remains scoped to `NN`, `NK`, `KK`, `IK`, and `XX`.
 
 ---
 

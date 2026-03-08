@@ -16,6 +16,13 @@ import java.nio.file.Path
 class NoiseTestHarnessTest {
     private val harness = NoiseTestHarness(CryptoProvider())
     private val repository by lazy { harness.loadFixtureRepository(sharedFixtureDirectory()) }
+    private val expectedSharedVectorPatterns = setOf(
+        HandshakePattern.NN,
+        HandshakePattern.NK,
+        HandshakePattern.KK,
+        HandshakePattern.IK,
+        HandshakePattern.XX
+    )
 
     private data class CoverageKey(
         val pattern: HandshakePattern,
@@ -74,7 +81,6 @@ class NoiseTestHarnessTest {
 
         assertEquals(80, fixtures.size)
 
-        val expectedPatterns = HandshakePattern.entries.toSet()
         val expectedDhs = setOf(VectorDhAlgorithm.DH_25519, VectorDhAlgorithm.DH_448)
         val expectedCiphers = setOf(VectorCipherAlgorithm.CHACHA_POLY, VectorCipherAlgorithm.AES_GCM)
         val expectedHashes = setOf(
@@ -95,7 +101,7 @@ class NoiseTestHarnessTest {
 
         assertTrue(coverage.values.all { it.size == 1 }, "Fixture corpus contains duplicate pattern/suite combinations.")
 
-        expectedPatterns.forEach { pattern ->
+        expectedSharedVectorPatterns.forEach { pattern ->
             expectedDhs.forEach { dh ->
                 expectedCiphers.forEach { cipher ->
                     expectedHashes.forEach { hash ->

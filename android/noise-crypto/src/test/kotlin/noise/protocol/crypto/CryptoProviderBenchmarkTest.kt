@@ -19,13 +19,7 @@ class CryptoProviderBenchmarkTest {
 
     @Test
     fun measuresHandshakeAcrossPatternsForAllCryptoVariations() {
-        val patterns = listOf(
-            HandshakePattern.NN,
-            HandshakePattern.NK,
-            HandshakePattern.KK,
-            HandshakePattern.IK,
-            HandshakePattern.XX
-        )
+        val patterns = HandshakePattern.entries
         val variations = allVariations()
         val measuredRounds = 8
 

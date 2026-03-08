@@ -59,6 +59,50 @@ enum class HandshakePattern(
             message(MessageDirection.RESPONDER_TO_INITIATOR, HandshakeToken.E, HandshakeToken.EE)
         )
     ),
+    NX(
+        protocolName = "Noise_NX",
+        preMessages = emptyList(),
+        messages = listOf(
+            message(MessageDirection.INITIATOR_TO_RESPONDER, HandshakeToken.E),
+            message(
+                MessageDirection.RESPONDER_TO_INITIATOR,
+                HandshakeToken.E,
+                HandshakeToken.EE,
+                HandshakeToken.S,
+                HandshakeToken.ES
+            )
+        )
+    ),
+    XN(
+        protocolName = "Noise_XN",
+        preMessages = emptyList(),
+        messages = listOf(
+            message(MessageDirection.INITIATOR_TO_RESPONDER, HandshakeToken.E),
+            message(MessageDirection.RESPONDER_TO_INITIATOR, HandshakeToken.E, HandshakeToken.EE),
+            message(MessageDirection.INITIATOR_TO_RESPONDER, HandshakeToken.S, HandshakeToken.SE)
+        )
+    ),
+    XK(
+        protocolName = "Noise_XK",
+        preMessages = listOf(
+            preMessage(MessageDirection.RESPONDER_TO_INITIATOR, HandshakeToken.S)
+        ),
+        messages = listOf(
+            message(MessageDirection.INITIATOR_TO_RESPONDER, HandshakeToken.E, HandshakeToken.ES),
+            message(MessageDirection.RESPONDER_TO_INITIATOR, HandshakeToken.E, HandshakeToken.EE),
+            message(MessageDirection.INITIATOR_TO_RESPONDER, HandshakeToken.S, HandshakeToken.SE)
+        )
+    ),
+    KN(
+        protocolName = "Noise_KN",
+        preMessages = listOf(
+            preMessage(MessageDirection.INITIATOR_TO_RESPONDER, HandshakeToken.S)
+        ),
+        messages = listOf(
+            message(MessageDirection.INITIATOR_TO_RESPONDER, HandshakeToken.E),
+            message(MessageDirection.RESPONDER_TO_INITIATOR, HandshakeToken.E, HandshakeToken.EE, HandshakeToken.SE)
+        )
+    ),
     KK(
         protocolName = "Noise_KK",
         preMessages = listOf(
@@ -67,6 +111,31 @@ enum class HandshakePattern(
         ),
         messages = listOf(
             message(MessageDirection.INITIATOR_TO_RESPONDER, HandshakeToken.E, HandshakeToken.ES, HandshakeToken.SS),
+            message(MessageDirection.RESPONDER_TO_INITIATOR, HandshakeToken.E, HandshakeToken.EE, HandshakeToken.SE)
+        )
+    ),
+    KX(
+        protocolName = "Noise_KX",
+        preMessages = listOf(
+            preMessage(MessageDirection.INITIATOR_TO_RESPONDER, HandshakeToken.S)
+        ),
+        messages = listOf(
+            message(MessageDirection.INITIATOR_TO_RESPONDER, HandshakeToken.E),
+            message(
+                MessageDirection.RESPONDER_TO_INITIATOR,
+                HandshakeToken.E,
+                HandshakeToken.EE,
+                HandshakeToken.SE,
+                HandshakeToken.S,
+                HandshakeToken.ES
+            )
+        )
+    ),
+    IN(
+        protocolName = "Noise_IN",
+        preMessages = emptyList(),
+        messages = listOf(
+            message(MessageDirection.INITIATOR_TO_RESPONDER, HandshakeToken.E, HandshakeToken.S),
             message(MessageDirection.RESPONDER_TO_INITIATOR, HandshakeToken.E, HandshakeToken.EE, HandshakeToken.SE)
         )
     ),
@@ -84,6 +153,21 @@ enum class HandshakePattern(
                 HandshakeToken.SS
             ),
             message(MessageDirection.RESPONDER_TO_INITIATOR, HandshakeToken.E, HandshakeToken.EE, HandshakeToken.SE)
+        )
+    ),
+    IX(
+        protocolName = "Noise_IX",
+        preMessages = emptyList(),
+        messages = listOf(
+            message(MessageDirection.INITIATOR_TO_RESPONDER, HandshakeToken.E, HandshakeToken.S),
+            message(
+                MessageDirection.RESPONDER_TO_INITIATOR,
+                HandshakeToken.E,
+                HandshakeToken.EE,
+                HandshakeToken.SE,
+                HandshakeToken.S,
+                HandshakeToken.ES
+            )
         )
     ),
     XX(

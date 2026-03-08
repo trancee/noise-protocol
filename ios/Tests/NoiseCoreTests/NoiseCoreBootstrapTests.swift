@@ -25,7 +25,7 @@ func bootstrapLibraryVersion() throws {
     #expect(NoiseCoreVersion.libraryVersion == canonicalVersion)
 }
 
-@Test("Pattern table ordering is correct for NN/NK/KK/IK/XX")
+@Test("Pattern table ordering is correct for all fundamental interactive patterns")
 func handshakePatternTableOrdering() {
     let expected: [(NoiseHandshakePatternName, [NoisePatternMessage], [NoisePatternMessage])] = [
         (
@@ -45,6 +45,40 @@ func handshakePatternTableOrdering() {
             ]
         ),
         (
+            .nx,
+            [],
+            [
+                NoisePatternMessage(direction: .initiatorToResponder, tokens: [.e]),
+                NoisePatternMessage(direction: .responderToInitiator, tokens: [.e, .ee, .s, .es]),
+            ]
+        ),
+        (
+            .xn,
+            [],
+            [
+                NoisePatternMessage(direction: .initiatorToResponder, tokens: [.e]),
+                NoisePatternMessage(direction: .responderToInitiator, tokens: [.e, .ee]),
+                NoisePatternMessage(direction: .initiatorToResponder, tokens: [.s, .se]),
+            ]
+        ),
+        (
+            .xk,
+            [NoisePatternMessage(direction: .responderToInitiator, tokens: [.s])],
+            [
+                NoisePatternMessage(direction: .initiatorToResponder, tokens: [.e, .es]),
+                NoisePatternMessage(direction: .responderToInitiator, tokens: [.e, .ee]),
+                NoisePatternMessage(direction: .initiatorToResponder, tokens: [.s, .se]),
+            ]
+        ),
+        (
+            .kn,
+            [NoisePatternMessage(direction: .initiatorToResponder, tokens: [.s])],
+            [
+                NoisePatternMessage(direction: .initiatorToResponder, tokens: [.e]),
+                NoisePatternMessage(direction: .responderToInitiator, tokens: [.e, .ee, .se]),
+            ]
+        ),
+        (
             .kk,
             [
                 NoisePatternMessage(direction: .initiatorToResponder, tokens: [.s]),
@@ -56,11 +90,35 @@ func handshakePatternTableOrdering() {
             ]
         ),
         (
+            .kx,
+            [NoisePatternMessage(direction: .initiatorToResponder, tokens: [.s])],
+            [
+                NoisePatternMessage(direction: .initiatorToResponder, tokens: [.e]),
+                NoisePatternMessage(direction: .responderToInitiator, tokens: [.e, .ee, .se, .s, .es]),
+            ]
+        ),
+        (
+            .in,
+            [],
+            [
+                NoisePatternMessage(direction: .initiatorToResponder, tokens: [.e, .s]),
+                NoisePatternMessage(direction: .responderToInitiator, tokens: [.e, .ee, .se]),
+            ]
+        ),
+        (
             .ik,
             [NoisePatternMessage(direction: .responderToInitiator, tokens: [.s])],
             [
                 NoisePatternMessage(direction: .initiatorToResponder, tokens: [.e, .es, .s, .ss]),
                 NoisePatternMessage(direction: .responderToInitiator, tokens: [.e, .ee, .se]),
+            ]
+        ),
+        (
+            .ix,
+            [],
+            [
+                NoisePatternMessage(direction: .initiatorToResponder, tokens: [.e, .s]),
+                NoisePatternMessage(direction: .responderToInitiator, tokens: [.e, .ee, .se, .s, .es]),
             ]
         ),
         (
@@ -74,7 +132,7 @@ func handshakePatternTableOrdering() {
         ),
     ]
 
-    #expect(NoiseHandshakePatterns.all.count == 5)
+    #expect(NoiseHandshakePatterns.all.count == 12)
     for (name, preMessages, messages) in expected {
         let pattern = NoiseHandshakePatterns.pattern(named: name)
         #expect(pattern.preMessages == preMessages)
@@ -648,12 +706,33 @@ private func makeBenchmarkHandshakeState(
     case .nk:
         localStaticKey = isInitiator ? nil : keyMaterial.responderStatic
         remoteStaticKey = isInitiator ? keyMaterial.responderStatic.publicKey : nil
+    case .nx:
+        localStaticKey = isInitiator ? nil : keyMaterial.responderStatic
+        remoteStaticKey = nil
+    case .xn:
+        localStaticKey = isInitiator ? keyMaterial.initiatorStatic : nil
+        remoteStaticKey = nil
+    case .xk:
+        localStaticKey = isInitiator ? keyMaterial.initiatorStatic : keyMaterial.responderStatic
+        remoteStaticKey = isInitiator ? keyMaterial.responderStatic.publicKey : nil
+    case .kn:
+        localStaticKey = isInitiator ? keyMaterial.initiatorStatic : nil
+        remoteStaticKey = isInitiator ? nil : keyMaterial.initiatorStatic.publicKey
     case .kk:
         localStaticKey = isInitiator ? keyMaterial.initiatorStatic : keyMaterial.responderStatic
         remoteStaticKey = isInitiator ? keyMaterial.responderStatic.publicKey : keyMaterial.initiatorStatic.publicKey
+    case .kx:
+        localStaticKey = isInitiator ? keyMaterial.initiatorStatic : keyMaterial.responderStatic
+        remoteStaticKey = isInitiator ? nil : keyMaterial.initiatorStatic.publicKey
+    case .in:
+        localStaticKey = isInitiator ? keyMaterial.initiatorStatic : nil
+        remoteStaticKey = nil
     case .ik:
         localStaticKey = isInitiator ? keyMaterial.initiatorStatic : keyMaterial.responderStatic
         remoteStaticKey = isInitiator ? keyMaterial.responderStatic.publicKey : nil
+    case .ix:
+        localStaticKey = isInitiator ? keyMaterial.initiatorStatic : keyMaterial.responderStatic
+        remoteStaticKey = nil
     case .xx:
         localStaticKey = isInitiator ? keyMaterial.initiatorStatic : keyMaterial.responderStatic
         remoteStaticKey = nil

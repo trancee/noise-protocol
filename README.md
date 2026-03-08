@@ -15,10 +15,10 @@ Tracked upstream baseline:
 - Maintenance guide: `docs/Noise_Protocol_Upstream_Tracking.md`
 
 Current scope:
-- Handshake patterns: `NN`, `NK`, `KK`, `IK`, `XX`
+- Fundamental interactive handshake patterns: `NN`, `NK`, `NX`, `XN`, `XK`, `XX`, `KN`, `KK`, `KX`, `IN`, `IK`, `IX`
 - Core state machines: `CipherState`, `SymmetricState`, `HandshakeState`
 - Pluggable crypto adapters
-- Shared test-vector harness and Android/iOS interop checks
+- Shared test-vector harness and Android/iOS interop checks for the current shared vector subset: `NN`, `NK`, `KK`, `IK`, `XX`
 
 ## Repository layout
 
