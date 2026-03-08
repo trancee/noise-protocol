@@ -111,6 +111,60 @@ The repository ships representative official-format samples for `NN`, `NN 448`, 
 - If an upstream Noise change requires repository changes, choose the release bump by impact: patch for docs/test/automation-only work, minor for additive compatible behavior, major for breaking API or interoperability changes.
 - Detailed maintenance guidance lives in `docs/Noise_Protocol_Upstream_Tracking.md`.
 
+## Developer guide
+
+### Start with the default unless you need a reason not to
+
+The default bootstrap profile on both platforms is:
+
+- Protocol name: `Noise_XX_25519_AESGCM_SHA256`
+- Pattern: `XX`
+- DH: `25519`
+- AEAD: `AESGCM`
+- Hash/HKDF: `SHA256`
+
+Use that default when:
+
+- both peers can exchange static keys during the handshake
+- you want a well-supported interactive handshake with identity protection during setup
+- you do not need a pre-shared key modifier
+
+Move away from the default only when your deployment model requires it.
+
+### Choose the right variation
+
+Common protocol-name variations and when to use them:
+
+| Need | Recommended variation | Why |
+|---|---|---|
+| No static keys known in advance | `Noise_NN_...` | simplest anonymous interactive handshake |
+| Responder static key pinned in advance | `Noise_NK_...` or `Noise_IK_...` | avoids sending or trusting an unauthenticated responder static late in the flow |
+| Mutual static authentication during handshake | `Noise_KK_...` or `Noise_XX_...` | both peers authenticate with static keys |
+| One-way request pattern | `Noise_N_...`, `Noise_K_...`, or `Noise_X_...` | supported by the core without a full interactive handshake |
+| Pre-shared key hardening | add `pskN`, for example `Noise_XXpsk2_25519_ChaChaPoly_SHA256` | mixes an out-of-band PSK into the transcript at message `N` |
+| Larger DH security margin | replace `25519` with `448` | available on both platforms |
+| Prefer software-friendly AEAD | replace `AESGCM` with `ChaChaPoly` | good fit on devices without strong AES acceleration |
+| Stronger or alternative hash/HKDF | replace `SHA256` with `SHA512`, `BLAKE2s`, or `BLAKE2b` | match ecosystem or policy requirements |
+
+Protocol-name rules:
+
+- Both peers must use the exact same protocol name.
+- The protocol name must match the selected handshake pattern and crypto suite exactly.
+- Only base patterns plus optional `pskN` modifiers are supported today.
+- Unsupported modifiers such as `fallback` are rejected.
+
+### Best practices
+
+- Prefer `HandshakeSession` on Android and `NoiseHandshakeSession` on Swift for application code. Drop down to `HandshakeState` only when you need lower-level control.
+- Generate fresh ephemeral keys per handshake. Reuse static keys only when your trust model requires long-term identities.
+- Provide `remoteStatic` only when the chosen pattern and your trust model actually require a pinned remote identity.
+- Use `expectedDirection()` and `isComplete()` to enforce turn-taking instead of inferring message order in app code.
+- Use `handshakeHash()` for channel binding only after both peers agree on the handshake state you are binding.
+- Keep PSKs outside the repository and inject them by placement index, for example `psk0` -> `0`, `psk2` -> `2`.
+- Treat `setNonce(...)` and `setNonce(_:)` as advanced transport controls for out-of-order delivery. Do not use them in ordinary ordered transports.
+- Use the framed message helpers only for Noise handshake framing. They enforce the shared 16-bit big-endian frame format and reject messages larger than 65,535 bytes.
+- Prefer a single cached fixture repository when running repeated deterministic tests or negative cases.
+
 ## Android usage (Kotlin)
 
 Minimum supported Android API level: 23.
@@ -148,6 +202,8 @@ val suite = defaultConfig.suite
 // defaultConfig.pattern == HandshakePattern.XX
 // defaultConfig.protocolName == "Noise_XX_25519_AESGCM_SHA256"
 ```
+
+If you are building application code instead of a test harness, prefer `HandshakeSession` as the main entry point and keep the provider/configuration objects long-lived when possible.
 
 ### 3) Run a handshake (default XX profile)
 
@@ -228,6 +284,12 @@ check(inboundPayload.contentEquals("hello".encodeToByteArray()))
 check(initiatorSession.expectedDirection() == MessageDirection.RESPONDER_TO_INITIATOR)
 ```
 
+Use the session wrapper when:
+
+- you want framed `ByteArray` messages directly
+- you need `expectedDirection()` / `isComplete()` progress inspection
+- you want a surface that mirrors the Swift API closely
+
 ### 4) Use a different crypto suite
 
 ```kotlin
@@ -249,6 +311,39 @@ val customProtocolName = "Noise_XX_25519_ChaChaPoly_SHA512"
 
 Use `customSuite`, `customPattern`, and `customProtocolName` in `HandshakeState.initialize(...)` on both peers.
 `CryptoProvider.createSuite(...)` is cheap to call repeatedly because stateless adapter instances are reused internally.
+
+Built-in Android suite variations:
+
+- DH: `NoiseDhAlgorithm.X25519`, `NoiseDhAlgorithm.X448`
+- AEAD: `NoiseAeadAlgorithm.AES_GCM`, `NoiseAeadAlgorithm.CHACHA20_POLY1305`
+- Hash/HKDF: `NoiseHashAlgorithm.SHA256`, `NoiseHashAlgorithm.SHA512`, `NoiseHashAlgorithm.BLAKE2S`, `NoiseHashAlgorithm.BLAKE2B`
+
+### 4.1) Add a PSK modifier
+
+If the protocol name contains `pskN`, both peers must supply a PSK at placement `N`.
+
+```kotlin
+val pskProtocolName = "Noise_XXpsk2_25519_ChaChaPoly_SHA256"
+val pskPattern = HandshakePattern.XX
+val pskBytes = ByteArray(32) { it.toByte() }
+
+val initiatorSession = HandshakeSession()
+initiatorSession.initialize(
+  pattern = pskPattern,
+  role = HandshakeRole.INITIATOR,
+  cryptoSuite = suite,
+  protocolName = pskProtocolName,
+  preSharedKeys = mapOf(2 to pskBytes),
+  localStatic = initiatorStatic,
+  remoteStatic = responderStatic.publicKey
+)
+```
+
+Best practice:
+
+- keep the PSK map minimal and exact
+- do not pass unexpected PSK placements
+- rotate PSKs independently from static key pairs
 
 ### 5) Reuse the shared vector harness efficiently
 
@@ -283,6 +378,8 @@ Example (`Package.swift`):
   - `NoiseCore`
   - `NoiseCryptoAdapters`
 
+If you need the deterministic fixture harness or official-vector conversion support in Swift tools or tests, also link `NoiseTestHarness`.
+
 ### 2) Build the default Noise configuration
 
 ```swift
@@ -294,6 +391,8 @@ let factory = NoiseCryptoAdapterFactory()
 let suite = NoiseCryptoSuiteDescriptor.bootstrapDefault
 let provider = try await factory.makeBootstrapDefaultProvider()
 ```
+
+For app code, prefer keeping one `NoiseCryptoAdapterFactory` around and creating providers from descriptors as needed. The built-in registry is shared internally, so repeated provider construction is cheap.
 
 ### 3) Run a handshake session (default XX profile)
 
@@ -342,6 +441,8 @@ Swift `NoiseHandshakeMessage.encoded()` uses the same 16-bit big-endian frame la
 For out-of-order transport use cases, `NoiseCipherState.setNonce(_:)` allows monotonic nonce advancement without resetting keys.
 `NoiseHandshakeSession.expectedDirection()` and `isComplete()` expose handshake progress to callers that need to drive strict turn-taking explicitly.
 
+Use `NoiseHandshakeSession` as the default app-facing API. Use lower-level state types only when you need custom message orchestration or direct state-machine testing.
+
 ### 4) Use a different crypto suite
 
 ```swift
@@ -359,6 +460,42 @@ let customProvider = try await factory.makeProvider(for: customSuite)
 
 Use `customSuite.protocolName` and `customProvider` when initializing both handshake sessions.
 Default `NoiseCryptoAdapterFactory()` instances share a built-in registry actor, so repeated factory construction does not rebuild the built-in adapter catalog.
+
+Built-in Swift suite variations:
+
+- DH: `25519`, `448`
+- Ciphers: `ChaChaPoly`, `AESGCM`
+- Hash/HKDF: `SHA256`, `SHA512`, `BLAKE2s`, `BLAKE2b`
+
+### 4.1) Add a PSK modifier
+
+If the protocol name contains `pskN`, both peers must supply a PSK at placement `N`.
+
+```swift
+let pskSuite = NoiseCryptoSuiteDescriptor(
+  protocolName: NoiseProtocolDescriptor(rawValue: "Noise_XXpsk2_25519_ChaChaPoly_SHA256"),
+  diffieHellman: "25519",
+  cipher: "ChaChaPoly",
+  hash: "SHA256"
+)
+let pskProvider = try await factory.makeProvider(for: pskSuite)
+let psk = Data((0..<32).map(UInt8.init))
+
+let initiatorConfig = NoiseHandshakeConfiguration(
+  protocolName: pskSuite.protocolName,
+  isInitiator: true,
+  handshakePattern: .xx,
+  preSharedKeys: [2: psk],
+  localStaticKey: initiatorStatic,
+  remoteStaticKey: responderStatic.publicKey
+)
+```
+
+Best practice:
+
+- use integer PSK placements that match the protocol name exactly
+- inject the same PSK set on both peers
+- keep PSKs separate from the static identity-key lifecycle
 
 ### 5) Reuse the shared iOS vector harness efficiently
 
@@ -420,9 +557,11 @@ Policy: always use the script above when running benchmarks so `docs/Benchmark_T
   - AEAD: `ChaCha20-Poly1305`, `AES-GCM`
   - Hash/HKDF: `SHA-256`, `SHA-512`, `BLAKE2s`, `BLAKE2b`
 - iOS built-in registry ships:
-  - DH: `25519`
+  - DH: `25519`, `448`
   - Ciphers: `ChaChaPoly`, `AESGCM`
-  - Hashes: `SHA256`, `SHA512`
+  - Hashes: `SHA256`, `SHA512`, `BLAKE2s`, `BLAKE2b`
+- Official-vector conversion currently supports directly translatable shared-v1 cases. Fallback, hybrid, and asymmetric-prologue official wiki vectors still need a future schema revision.
+- The shared repository fixture corpus currently focuses interop coverage on `NN`, `NK`, `KK`, `IK`, and `XX`, even though the core protocol surface supports the broader one-way and interactive pattern set listed above.
 
 For architecture and internals, see:
 - `docs/Noise_Protocol_Core.md`
