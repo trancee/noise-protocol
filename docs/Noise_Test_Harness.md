@@ -236,6 +236,7 @@ The test harness does NOT attempt to:
 - `NoiseVectorFixtureLoader` loads v1 fixtures directly from `test-vectors/fixtures/v1/`
 - `NoiseVectorFixtureRepository` caches a loaded fixture corpus, supports lookup by `vector_id`, and filters by
   pattern / DH / cipher / hash so repeated deterministic runs do not re-parse the full corpus.
+- `NoiseTestHarness.isSupported(...)` and `NoiseTestHarness.supportedFixtures(...)` expose provider-driven support discovery for fixture corpora.
 - `NoiseTestHarness.runDeterministic(...)` coordinates deterministic `HandshakeState` execution with injected fixture key material
 - `NoiseTestHarness.runDeterministic(repository, vectorId, ...)` resolves vectors from a cached repository for repeated runs
 - `NoiseTestHarness.runNegativeCase(...)` applies fixture-driven mutation hooks (including tag tamper and handshake message-order mutations) and reports failures as harness results
@@ -251,6 +252,7 @@ The test harness does NOT attempt to:
 - `NoiseVectorFixtureLoader` loads shared fixtures from `test-vectors/fixtures/v1/` and decodes the v1 contract.
 - `NoiseVectorFixtureRepository` caches the decoded iOS fixture corpus and supports lookup by `vector_id` plus
   filtering by pattern / DH / cipher / hash for repeated verification runs.
+- `NoiseVectorRunner.supports(_:)` and `NoiseVectorRunner.supportedFixtures(repository:)` expose registry-driven support discovery for the shared fixture corpus.
 - `NoiseVectorRunner.run(_:)` executes deterministic handshake orchestration using `NoiseCore` and crypto adapters selected from the fixture suite metadata.
 - `NoiseVectorRunner.verifyExpected(_:)` compares handshake messages, transcript hash, and split transport keys byte-for-byte against fixture expectations.
 - `NoiseVectorRunner.verifyExpected(repository:vectorID:)` resolves fixtures from the cached repository for repeated deterministic verification.

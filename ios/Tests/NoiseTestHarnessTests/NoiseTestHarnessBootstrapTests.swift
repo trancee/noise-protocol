@@ -97,6 +97,19 @@ func runnerResolvesChecksFromCachedRepository() async throws {
     #expect(negative.actualErrorCode == "decrypt_failed")
 }
 
+@Test("Runner reports supported shared fixtures for current iOS crypto registry")
+func runnerReportsSupportedSharedFixtures() async throws {
+    let repository = NoiseVectorFixtureRepository()
+    let runner = NoiseVectorRunner()
+
+    let supported = try await runner.supportedFixtures(repository: repository)
+
+    #expect(supported.count == 20)
+    for fixture in supported {
+        #expect(await runner.supports(fixture))
+    }
+}
+
 @Test("Fixture corpus covers full pattern and suite matrix")
 func fixtureCorpusCoversFullPatternAndSuiteMatrix() throws {
     let fixtures = try NoiseVectorFixtureLoader().loadFixtures()
@@ -133,15 +146,11 @@ func fixtureCorpusCoversFullPatternAndSuiteMatrix() throws {
 
 @Test("Deterministic execution validates all iOS-supported fixtures")
 func deterministicExecutionValidatesAllSupportedFixtures() async throws {
-    let fixtures = try await NoiseVectorFixtureRepository().filter(
-        diffieHellman: .x25519
-    )
-        .filter {
-            $0.protocolInfo.suite.hash == .sha256 || $0.protocolInfo.suite.hash == .sha512
-        }
+    let repository = NoiseVectorFixtureRepository()
+    let runner = NoiseVectorRunner()
+    let fixtures = try await runner.supportedFixtures(repository: repository)
     #expect(fixtures.count == 20)
 
-    let runner = NoiseVectorRunner()
     for fixture in fixtures {
         _ = try await runner.verifyExpected(fixture)
     }

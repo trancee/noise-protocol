@@ -129,6 +129,14 @@ class NoiseTestHarnessTest {
         assertEquals("decrypt_failed", negativeResult.failure?.code)
     }
 
+    @Test
+    fun supportedFixturesReturnsEntireCorpusForAndroidProvider() {
+        val supported = harness.supportedFixtures(repository)
+
+        assertEquals(80, supported.size)
+        assertTrue(supported.all(harness::isSupported))
+    }
+
     private fun assertExpectedArtifacts(fixture: NoiseVectorFixture, result: HarnessRunResult) {
         assertEquals(HarnessRunStatus.PASS, result.status)
         assertTrue(result.passed)

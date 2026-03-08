@@ -474,6 +474,18 @@ class NoiseTestHarness(
         return runDeterministic(repository.requireById(vectorId), hooks)
     }
 
+    fun isSupported(vector: NoiseVectorFixture): Boolean {
+        if (!provider.supports(vector.protocol.pattern)) {
+            return false
+        }
+
+        return runCatching { provider.createSuite(vector.protocol.suite.toNoiseAlgorithms()) }.isSuccess
+    }
+
+    fun supportedFixtures(repository: NoiseVectorFixtureRepository): List<NoiseVectorFixture> {
+        return repository.all().filter(::isSupported)
+    }
+
     fun runDeterministic(
         vector: NoiseVectorFixture,
         hooks: HarnessRunHooks = HarnessRunHooks()

@@ -318,6 +318,31 @@ public actor NoiseVectorRunner {
         try await execute(fixture)
     }
 
+    public func supports(_ fixture: NoiseVectorFixture) async -> Bool {
+        do {
+            _ = try await makeProvider(for: fixture)
+            return true
+        } catch {
+            return false
+        }
+    }
+
+    public func supportedFixtures(
+        repository: NoiseVectorFixtureRepository
+    ) async throws -> [NoiseVectorFixture] {
+        let fixtures = try await repository.fixtures()
+        var supported: [NoiseVectorFixture] = []
+        supported.reserveCapacity(fixtures.count)
+
+        for fixture in fixtures {
+            if await supports(fixture) {
+                supported.append(fixture)
+            }
+        }
+
+        return supported
+    }
+
     public func verifyExpected(
         repository: NoiseVectorFixtureRepository,
         vectorID: String
