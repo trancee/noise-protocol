@@ -152,6 +152,7 @@ val customProtocolName = "Noise_XX_25519_ChaChaPoly_SHA512"
 ```
 
 Use `customSuite`, `customPattern`, and `customProtocolName` in `HandshakeState.initialize(...)` on both peers.
+`CryptoProvider.createSuite(...)` is cheap to call repeatedly because stateless adapter instances are reused internally.
 
 ### 5) Reuse the shared vector harness efficiently
 

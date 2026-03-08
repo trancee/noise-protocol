@@ -41,7 +41,7 @@ abstract class HmacHkdfAdapter(
         var previous = ByteArray(0)
 
         for (counter in 1..outputs) {
-            previous = hmac(pseudorandomKey, previous + counter.toByte())
+            previous = hmac(pseudorandomKey, appendByte(previous, counter.toByte()))
             result += previous.copyOf(outputLength)
         }
         return result
@@ -59,8 +59,22 @@ abstract class HmacHkdfAdapter(
             (normalizedKey[index].toInt() xor 0x36).toByte()
         }
 
-        val innerHash = digest.digest(innerPad + data)
-        return digest.digest(outerPad + innerHash)
+        val innerHash = digest.digest(concatenate(innerPad, data))
+        return digest.digest(concatenate(outerPad, innerHash))
+    }
+
+    private fun appendByte(input: ByteArray, value: Byte): ByteArray {
+        val extended = ByteArray(input.size + 1)
+        input.copyInto(extended, destinationOffset = 0)
+        extended[input.size] = value
+        return extended
+    }
+
+    private fun concatenate(left: ByteArray, right: ByteArray): ByteArray {
+        val combined = ByteArray(left.size + right.size)
+        left.copyInto(combined, destinationOffset = 0)
+        right.copyInto(combined, destinationOffset = left.size)
+        return combined
     }
 }
 

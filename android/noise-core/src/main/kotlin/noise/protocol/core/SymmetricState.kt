@@ -19,7 +19,7 @@ class SymmetricState(
     fun hasCipherKey(): Boolean = cipherState.hasKey()
 
     fun mixHash(data: ByteArray) {
-        handshakeHashValue = hashFunction.hash(handshakeHashValue + data)
+        handshakeHashValue = hashFunction.hash(concatenate(handshakeHashValue, data))
     }
 
     fun mixKey(inputKeyMaterial: ByteArray) {
@@ -53,5 +53,12 @@ class SymmetricState(
     private companion object {
         const val CIPHER_KEY_LENGTH = 32
         val EMPTY_BYTE_ARRAY = ByteArray(0)
+
+        fun concatenate(left: ByteArray, right: ByteArray): ByteArray {
+            val combined = ByteArray(left.size + right.size)
+            left.copyInto(combined, destinationOffset = 0)
+            right.copyInto(combined, destinationOffset = left.size)
+            return combined
+        }
     }
 }
