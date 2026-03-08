@@ -173,7 +173,7 @@ check(!negative.passed)
 
 ## iOS usage (Swift)
 
-Requires Swift 6.0 or newer.
+Requires Swift 6.1 or newer.
 
 ### 1) Add package
 

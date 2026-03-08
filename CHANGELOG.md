@@ -28,3 +28,4 @@ All notable changes to this project are documented in this file.
 - Android and iOS crypto/provider setup now reuses built-in stateless adapters and registries instead of rebuilding them for repeated suite or factory creation.
 - Android Kotlin and iOS Swift handshake/HKDF/message-encoding paths now avoid several unnecessary short-lived buffer allocations.
 - Cross-platform harness verification now checks fixture-expected artifacts on both Android and iOS, and benchmark documentation is refreshed from the current benchmark scripts.
+- CI, release, and Swift package toolchain pins now target Java 21, Gradle 9.4.0, Xcode 16.4, and Swift tools 6.1.

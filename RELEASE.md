@@ -6,10 +6,10 @@ This runbook documents the release flow implemented in `.github/workflows/releas
 
 ### Tooling (for local preflight)
 
-- Java 17
-- Gradle 9.3.1
-- Xcode 16.1
-- Swift 6.0
+- Java 21
+- Gradle 9.4.0
+- Xcode 16.4
+- Swift 6.1
 
 ### Repository settings and operator permissions
 

@@ -15,9 +15,9 @@ permissions:
   contents: write
 
 env:
-  JAVA_VERSION: "17"
-  GRADLE_VERSION: "9.3.1"
-  XCODE_VERSION: "16.1"
+  JAVA_VERSION: "21"
+  GRADLE_VERSION: "9.4.0"
+  XCODE_VERSION: "16.4"
   RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
 
 jobs:

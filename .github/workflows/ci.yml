@@ -10,9 +10,9 @@ permissions:
   contents: read
 
 env:
-  JAVA_VERSION: "17"
-  GRADLE_VERSION: "9.3.1"
-  XCODE_VERSION: "16.1"
+  JAVA_VERSION: "21"
+  GRADLE_VERSION: "9.4.0"
+  XCODE_VERSION: "16.4"
 
 jobs:
   version-parity:

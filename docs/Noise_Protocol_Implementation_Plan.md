@@ -56,7 +56,7 @@
 - Swift package manifest: `ios/Package.swift`
 - Bootstrap modules: `NoiseCore`, `NoiseCryptoAdapters`, `NoiseTestHarness`
 - Run baseline tests: `cd ios && swift test`
-- Current iOS APIs are compile-safe placeholders with Swift 6 language mode, strict concurrency checks, and warnings treated as errors.
+- Current iOS APIs are compile-safe placeholders with Swift 6 language mode, Swift tools 6.1, strict concurrency checks, and warnings treated as errors.
 
 ### Local verification commands (developer workflow)
 
@@ -68,9 +68,9 @@
 ### CI validation matrix (current scaffold)
 
 - Workflow: `.github/workflows/ci.yml`
-- Android job (`ubuntu-24.04`, Java 17, Gradle 9.3.1): `cd android && gradle --no-daemon --console=plain :noise-core:test :noise-crypto:test :noise-testing:test`
-- iOS job (`macos-15`, Xcode 16.1): `cd ios && swift test`
-- Cross-platform interop job (`macos-15`, Xcode 16.1, Java 17, Gradle 9.3.1): `./scripts/verify-cross-platform-interop.sh`
+- Android job (`ubuntu-24.04`, Java 21, Gradle 9.4.0): `cd android && gradle --no-daemon --console=plain :noise-core:test :noise-crypto:test :noise-testing:test`
+- iOS job (`macos-15`, Xcode 16.4): `cd ios && swift test`
+- Cross-platform interop job (`macos-15`, Xcode 16.4, Java 21, Gradle 9.4.0): `./scripts/verify-cross-platform-interop.sh`
 
 ### Dependency update policy (Dependabot)
 
