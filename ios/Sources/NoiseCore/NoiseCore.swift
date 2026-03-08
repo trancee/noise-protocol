@@ -55,24 +55,45 @@ public struct NoiseProtocolDescriptor: Sendable, Hashable {
         guard let patternSegment else {
             return nil
         }
-        let prefix = patternSegment.prefix { character in
-            character.isUppercase
+        guard let expression = try? NSRegularExpression(pattern: "^([A-Z]+)((?:psk\\d+)?(?:\\+psk\\d+)*)$") else {
+            return nil
         }
-        return prefix.isEmpty ? nil : String(prefix)
+        let nsRange = NSRange(patternSegment.startIndex..<patternSegment.endIndex, in: patternSegment)
+        guard let match = expression.firstMatch(in: patternSegment, range: nsRange),
+            match.range == nsRange,
+            let range = Range(match.range(at: 1), in: patternSegment)
+        else {
+            return nil
+        }
+        return String(patternSegment[range])
     }
 
-    fileprivate func preSharedKeyPlacements(messageCount: Int) throws -> Set<Int> {
+    fileprivate func supportedPatternComponents(messageCount: Int) throws -> (basePatternName: String, pskPlacements: Set<Int>) {
         guard let patternSegment else {
-            return []
+            throw NoiseCoreError.invalidMessage("Noise protocol names must include a handshake pattern segment.")
         }
-        let expression = try NSRegularExpression(pattern: "psk(\\d+)")
+
+        let patternExpression = try NSRegularExpression(pattern: "^([A-Z]+)((?:psk\\d+)?(?:\\+psk\\d+)*)$")
         let nsRange = NSRange(patternSegment.startIndex..<patternSegment.endIndex, in: patternSegment)
-        let placements: [Int] = expression.matches(in: patternSegment, range: nsRange).compactMap {
+        guard let patternMatch = patternExpression.firstMatch(in: patternSegment, range: nsRange),
+            patternMatch.range == nsRange,
+            let basePatternRange = Range(patternMatch.range(at: 1), in: patternSegment),
+            let modifiersRange = Range(patternMatch.range(at: 2), in: patternSegment)
+        else {
+            throw NoiseCoreError.invalidMessage(
+                "Only base patterns and pskN modifiers are currently supported in protocol names."
+            )
+        }
+
+        let modifiers = String(patternSegment[modifiersRange])
+        let expression = try NSRegularExpression(pattern: "psk(\\d+)")
+        let modifiersRangeNs = NSRange(modifiers.startIndex..<modifiers.endIndex, in: modifiers)
+        let placements: [Int] = expression.matches(in: modifiers, range: modifiersRangeNs).compactMap {
             (match: NSTextCheckingResult) -> Int? in
-            guard let range = Range(match.range(at: 1), in: patternSegment) else {
+            guard let range = Range(match.range(at: 1), in: modifiers) else {
                 return nil
             }
-            return Int(patternSegment[range])
+            return Int(modifiers[range])
         }
 
         guard Set(placements).count == placements.count else {
@@ -83,7 +104,7 @@ public struct NoiseProtocolDescriptor: Sendable, Hashable {
                 "PSK modifiers must reference positions between 0 and \(messageCount)."
             )
         }
-        return Set(placements)
+        return (String(patternSegment[basePatternRange]), Set(placements))
     }
 }
 
@@ -752,7 +773,20 @@ public struct NoiseHandshakeState: Sendable {
     public init(configuration: NoiseHandshakeConfiguration, hash: any NoiseHashAlgorithm) throws {
         self.configuration = configuration
         pattern = NoiseHandshakePatterns.pattern(named: configuration.handshakePattern)
-        pskPlacements = try configuration.protocolName.preSharedKeyPlacements(messageCount: pattern.messages.count)
+        let patternComponents = try configuration.protocolName.supportedPatternComponents(
+            messageCount: pattern.messages.count
+        )
+        guard let protocolPattern = NoiseHandshakePatternName(rawValue: patternComponents.basePatternName) else {
+            throw NoiseCoreError.invalidMessage(
+                "Unsupported handshake pattern \(patternComponents.basePatternName) in protocol name."
+            )
+        }
+        guard protocolPattern == configuration.handshakePattern else {
+            throw NoiseCoreError.invalidMessage(
+                "Protocol name base pattern \(protocolPattern.rawValue) does not match selected handshake pattern \(configuration.handshakePattern.rawValue)."
+            )
+        }
+        pskPlacements = patternComponents.pskPlacements
         symmetricState = NoiseSymmetricState(protocolName: configuration.protocolName, hash: hash)
         messageIndex = 0
         localStaticKey = configuration.localStaticKey

@@ -31,6 +31,12 @@ func protocolDescriptorParsesPskModifiers() {
     #expect(NoiseHandshakePatternName(protocolDescriptor: descriptor) == .xx)
 }
 
+@Test("Protocol descriptors reject unsupported modifier grammar")
+func protocolDescriptorRejectsUnsupportedModifierGrammar() {
+    let descriptor = NoiseProtocolDescriptor(rawValue: "Noise_XXfallback_25519_AESGCM_SHA256")
+    #expect(NoiseHandshakePatternName(protocolDescriptor: descriptor) == nil)
+}
+
 @Test("Pattern table ordering is correct for all currently supported handshake patterns")
 func handshakePatternTableOrdering() {
     let expected: [(NoiseHandshakePatternName, [NoisePatternMessage], [NoisePatternMessage])] = [
@@ -522,6 +528,59 @@ func handshakeStateRejectsMissingPskMaterial() {
     } catch let error as NoiseCoreError {
         if case let .missingKeyMaterial(detail) = error {
             #expect(detail.contains("psk0"))
+        } else {
+            Issue.record("Unexpected NoiseCoreError: \(error)")
+        }
+    } catch {
+        Issue.record("Unexpected error type: \(error)")
+    }
+}
+
+@Test("Handshake state rejects unsupported protocol-name modifiers")
+func handshakeStateRejectsUnsupportedProtocolNameModifiers() {
+    let hash = FakeHashAlgorithm()
+
+    do {
+        _ = try NoiseHandshakeState(
+            configuration: NoiseHandshakeConfiguration(
+                protocolName: NoiseProtocolDescriptor(rawValue: "Noise_XXfallback_25519_AESGCM_SHA256"),
+                isInitiator: true,
+                handshakePattern: .xx,
+                localStaticKey: NoiseDHKeyPair(privateKey: Data([0xA1]), publicKey: Data([0xB1])),
+                localEphemeralKey: NoiseDHKeyPair(privateKey: Data([0xA2]), publicKey: Data([0xB2]))
+            ),
+            hash: hash
+        )
+        Issue.record("Expected unsupported modifiers to be rejected.")
+    } catch let error as NoiseCoreError {
+        if case let .invalidMessage(detail) = error {
+            #expect(detail.contains("Only base patterns and pskN modifiers"))
+        } else {
+            Issue.record("Unexpected NoiseCoreError: \(error)")
+        }
+    } catch {
+        Issue.record("Unexpected error type: \(error)")
+    }
+}
+
+@Test("Handshake state rejects protocol-name pattern mismatches")
+func handshakeStateRejectsProtocolNamePatternMismatches() {
+    let hash = FakeHashAlgorithm()
+
+    do {
+        _ = try NoiseHandshakeState(
+            configuration: NoiseHandshakeConfiguration(
+                protocolName: NoiseProtocolDescriptor(rawValue: "Noise_XX_25519_AESGCM_SHA256"),
+                isInitiator: true,
+                handshakePattern: .nn,
+                localEphemeralKey: NoiseDHKeyPair(privateKey: Data([0xA2]), publicKey: Data([0xB2]))
+            ),
+            hash: hash
+        )
+        Issue.record("Expected protocol-name pattern mismatch to be rejected.")
+    } catch let error as NoiseCoreError {
+        if case let .invalidMessage(detail) = error {
+            #expect(detail.contains("does not match selected handshake pattern"))
         } else {
             Issue.record("Unexpected NoiseCoreError: \(error)")
         }

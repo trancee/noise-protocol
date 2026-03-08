@@ -494,6 +494,43 @@ class NoiseCoreStubTest {
         assertEquals("Missing pre-shared keys for psk0.", error.message)
     }
 
+    @Test
+    fun handshakeStateRejectsUnsupportedProtocolNameModifiers() {
+        val error = assertThrows(IllegalArgumentException::class.java) {
+            HandshakeState.initialize(
+                pattern = HandshakePattern.XX,
+                role = HandshakeRole.INITIATOR,
+                cryptoSuite = fakeCryptoSuite,
+                protocolName = "Noise_XXfallback_25519_AESGCM_SHA256",
+                localStatic = keyPair(41),
+                ephemeralKeyGenerator = { keyPair(42) }
+            )
+        }
+
+        assertEquals(
+            "Only base patterns and pskN modifiers are currently supported in protocol names.",
+            error.message
+        )
+    }
+
+    @Test
+    fun handshakeStateRejectsProtocolNamePatternMismatches() {
+        val error = assertThrows(IllegalArgumentException::class.java) {
+            HandshakeState.initialize(
+                pattern = HandshakePattern.NN,
+                role = HandshakeRole.INITIATOR,
+                cryptoSuite = fakeCryptoSuite,
+                protocolName = "Noise_XX_25519_AESGCM_SHA256",
+                ephemeralKeyGenerator = { keyPair(52) }
+            )
+        }
+
+        assertEquals(
+            "Protocol name base pattern XX does not match selected handshake pattern NN.",
+            error.message
+        )
+    }
+
     private class FakeNoiseCryptoSuite : NoiseCryptoSuite {
         override val hash: NoiseHashFunction = FakeHashFunction()
         override val keyDerivation: NoiseKeyDerivationFunction = FakeKeyDerivationFunction(hash)

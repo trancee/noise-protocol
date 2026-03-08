@@ -25,6 +25,7 @@ This document defines **protocol logic only**. It must not reference any concret
 
 Supported modifiers for the current core surface:
 - `psk0` through `pskN`, derived from the protocol name for any currently supported base pattern, with caller-supplied pre-shared key material for each referenced modifier
+- Protocol names outside that grammar, including unsupported modifiers such as `fallback`, are rejected until those features are implemented
 
 Handshake pattern tables (strictly ordered):
 - N: `<- s` (pre-message), `-> e, es`
@@ -99,6 +100,7 @@ Fields:
 Rules:
 - Driven entirely by handshake pattern table
 - No branching on initiator/responder except message direction
+- Protocol names must match the selected base pattern exactly, plus any currently supported modifiers
 - `psk0` is processed at the start of message 1; `pskN` is processed at the end of message `N`
 - Payload encrypted after all pattern tokens
 - Errors abort handshake immediately

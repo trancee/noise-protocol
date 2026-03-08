@@ -387,7 +387,7 @@ class HandshakeState private constructor(
             remoteEphemeral: ByteArray? = null,
             ephemeralKeyGenerator: () -> NoiseKeyPair = cryptoSuite.diffieHellman::generateKeyPair
         ): HandshakeState {
-            val pskPlacements = parsePskPlacements(protocolName, pattern.messages.size)
+            val pskPlacements = parsePskPlacements(protocolName, pattern.name, pattern.messages.size)
             validatePreSharedKeys(preSharedKeys, pskPlacements)
             val symmetricState = SymmetricState(
                 hashFunction = cryptoSuite.hash,
@@ -412,10 +412,28 @@ class HandshakeState private constructor(
             )
         }
 
-        private fun parsePskPlacements(protocolName: String, messageCount: Int): Set<Int> {
-            val patternSegment = protocolName.split('_').getOrNull(1).orEmpty()
+        private fun parsePskPlacements(
+            protocolName: String,
+            expectedPatternName: String,
+            messageCount: Int
+        ): Set<Int> {
+            val patternSegment = protocolName.split('_').getOrNull(1)
+            require(!patternSegment.isNullOrEmpty()) {
+                "Noise protocol names must include a handshake pattern segment."
+            }
+
+            val patternMatch = PROTOCOL_PATTERN_REGEX.matchEntire(patternSegment)
+            require(patternMatch != null) {
+                "Only base patterns and pskN modifiers are currently supported in protocol names."
+            }
+
+            val basePatternName = patternMatch.groupValues[1]
+            require(basePatternName == expectedPatternName) {
+                "Protocol name base pattern $basePatternName does not match selected handshake pattern $expectedPatternName."
+            }
+
             val placements = """psk(\d+)""".toRegex()
-                .findAll(patternSegment)
+                .findAll(patternMatch.groupValues[2])
                 .map { match -> match.groupValues[1].toInt() }
                 .toList()
 
@@ -435,6 +453,8 @@ class HandshakeState private constructor(
                 "Unexpected pre-shared keys provided for ${unexpected.sorted().joinToString { "psk$it" }}."
             }
         }
+
+        private val PROTOCOL_PATTERN_REGEX = Regex("^([A-Z]+)((?:psk\\d+)?(?:\\+psk\\d+)*)$")
     }
 }
 
