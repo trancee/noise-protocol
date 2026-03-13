@@ -1,0 +1,60 @@
+{
+  "skill_name": "noise-protocol-expert",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "I'm building an iOS app (Swift, iOS 17+) that does peer-to-peer encrypted messaging over Bluetooth between two phones. Both phones should authenticate each other. Neither phone knows the other's public key ahead of time — they'll exchange keys during the first connection. After that first pairing I want to cache the other phone's key so future connections are faster. What Noise pattern should I use, and can you show me the Swift code for the handshake state machine?",
+      "expected_output": "Recommends the XX pattern for the initial handshake (mutual auth, no prior key knowledge) with a transition to IK for subsequent connections using cached keys. Shows Swift code using CryptoKit for the HandshakeState implementation with XX pattern.",
+      "files": [],
+      "expectations": [
+        "Recommends XX pattern for the initial handshake since neither party knows the other's static key",
+        "Suggests caching the peer's static public key after the first XX handshake for future connections",
+        "Recommends IK (or mentions Noise Pipes / XXfallback) for subsequent connections using the cached key",
+        "Shows Swift code using CryptoKit's Curve25519.KeyAgreement for DH operations",
+        "Implements or describes the three-object hierarchy: CipherState, SymmetricState, HandshakeState",
+        "Correctly processes the XX pattern tokens: -> e, <- e ee s es, -> s se",
+        "Mentions storing the static key pair in the iOS Keychain"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "We have a Kotlin Android IoT hub that talks to multiple BLE peripherals. Each peripheral has a pre-shared 32-byte secret (printed on a sticker and scanned during setup) but NO static key pair. The hub does have a static key pair. We want to authenticate peripherals using just the PSK — no peripheral static keys to keep the firmware simple. We also need to protect the hub's identity from passive BLE sniffers. Which Noise pattern should we use and can you show me the Kotlin handshake code?",
+      "expected_output": "Recommends NKpsk0 or NNpsk0 since the peripheral has no static key but there IS a PSK. Explains how the PSK provides authentication of the peripheral, and the hub's static key (in NK) or lack thereof (in NN) affects hub authentication. Discusses identity hiding of the hub's static key. Provides Kotlin code.",
+      "files": [],
+      "expectations": [
+        "Recommends a PSK pattern variant (NKpsk0, NNpsk0, or similar) since the peripheral has no static key pair",
+        "Explains that the 'psk' token calls MixKeyAndHash to mix the pre-shared secret into both the encryption keys and handshake hash",
+        "Discusses identity hiding for the hub's static key — explains which patterns hide it from passive eavesdroppers vs which expose it",
+        "Warns about PSK management: each peripheral should ideally have a unique PSK, not a shared one across all devices",
+        "Addresses the BLE constraint — mentions message size limits or transport considerations for BLE MTU",
+        "Provides Kotlin code showing the handshake state machine with PSK integration"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "I have a working Noise_XX_25519_ChaChaPoly_SHA256 implementation in Kotlin but I'm getting decryption failures on the third handshake message (the one where the initiator sends `s, se`). The first two messages work fine. I'm pretty sure my DH is correct because the ee token works. Here's my WriteMessage for the third message:\n\n```kotlin\nfun writeMessage3(payload: ByteArray): ByteArray {\n    val buffer = ByteArrayOutputStream()\n    // s token: encrypt and send static public key\n    val encS = symmetricState.encryptAndHash(s.publicKey)\n    buffer.write(encS)\n    // se token: DH between my static and their ephemeral\n    val dhResult = s.dh(re)  // s = my static, re = remote ephemeral\n    symmetricState.mixKey(dhResult)\n    // payload\n    val encPayload = symmetricState.encryptAndHash(payload)\n    buffer.write(encPayload)\n    return buffer.toByteArray()\n}\n```\n\nThe responder fails to decrypt the static key in the `s` token. What am I doing wrong?",
+      "expected_output": "Diagnoses that the se token DH is using the wrong keys for the initiator. The initiator should compute DH(s, re) for se, which is correct in the code. The real issue is likely that the responder is computing the wrong DH for se — or there's a bug in the symmetric state. Actually, looking more carefully, the code looks correct for the initiator side. The decryption failure on the 's' token means the encryption key is wrong at that point, which means the state diverged earlier. Check that both sides processed the second message identically.",
+      "files": [],
+      "expectations": [
+        "Identifies that the decryption failure on the 's' token in message 3 means the SymmetricState diverged between initiator and responder",
+        "Points out that the 's' token encryption uses the key derived from prior DH operations (ee and es from message 2)",
+        "Suggests checking that the responder correctly processes message 2's es token with the right DH direction (responder computes DH(s, re) for es)",
+        "Notes that the shown code for writeMessage3 appears correct for the initiator's perspective",
+        "Recommends comparing the h and ck values on both sides after message 2 to find where the state diverged"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "Our team has a working Noise_IK_25519_ChaChaPoly_SHA256 transport between our Swift iOS client and a Go server. We need to add post-handshake user authentication — the Noise handshake authenticates the device keys, but we also need to verify the human user (think: the device is shared among family members). We're considering having the client send a signed JWT over the Noise transport, but a colleague suggested using the handshake hash for channel binding instead. Questions: (1) What's the right way to use the handshake hash for this? (2) What happens if the server's static key rotates — how should the client handle the IK decryption failure? (3) Our Go server sometimes sees decryption failures on transport messages after the handshake completes fine — we suspect nonce issues on reconnect. How should we investigate?",
+      "expected_output": "Addresses all three questions: (1) Use GetHandshakeHash() to get h, include it in the JWT or sign it alongside the JWT to bind the auth to this session. (2) Use Noise Pipes / XXfallback when IK fails. (3) Nonce desync likely from not resetting CipherState on new session, or persisting nonces across app restarts incorrectly.",
+      "files": [],
+      "expectations": [
+        "Explains how to use GetHandshakeHash() for channel binding — include h in or alongside the JWT so the auth token is bound to this specific Noise session and can't be replayed into a different session",
+        "For key rotation: recommends Noise Pipes (IK + XXfallback) so the client can gracefully fall back when the server's key has changed, rather than just failing",
+        "For transport decryption failures: identifies nonce desynchronization as the likely cause and explains that each new handshake must produce fresh CipherStates with nonce starting at 0",
+        "Warns that persisting transport CipherState across app restarts requires saving the nonce — or better yet, re-handshake on restart",
+        "Distinguishes between device authentication (Noise static keys) and user authentication (application layer) clearly"
+      ]
+    }
+  ]
+}

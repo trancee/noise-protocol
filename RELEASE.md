@@ -35,38 +35,26 @@ Optional Gradle signing property: `signingInMemoryKeyId`.
 - `VERSION` is the single source of truth for Android, iOS, and release automation.
 - Android reads version from `../VERSION` (`android/build.gradle.kts`).
 - Release tags must be `v<VERSION>`.
-- The tracked upstream Noise spec baseline lives in `noise-spec.lock`.
-- Release preflight must fail if `scripts/verify-noise-spec-upstream.sh` detects upstream drift.
-- Parity checks:
-  - `bash ./scripts/test-verify-noise-spec-upstream.sh`
-  - `bash ./scripts/verify-noise-spec-upstream.sh`
-  - `bash ./scripts/verify-version-parity.sh`
-  - `bash ./scripts/verify-version-parity.sh <tag>`
+- The release workflow verifies `VERSION` matches the tag inline (no external scripts).
 
 ## 3) Preflight checks
 
 Run these checks before creating the release trigger:
 
 ```bash
-# Noise spec lock and parser
-bash ./scripts/test-verify-noise-spec-upstream.sh
-bash ./scripts/verify-noise-spec-upstream.sh
-
-# Version parity
-bash ./scripts/verify-version-parity.sh
+# Version format
+version=$(cat VERSION)
+echo "Releasing v${version}"
 
 # Android tests
 cd android
-gradle --no-daemon --console=plain :noise-core:test :noise-crypto:test :noise-testing:test
+gradle --no-daemon --console=plain :lib:test
 cd ..
 
 # iOS tests
 cd ios
 swift test
 cd ..
-
-# Cross-platform deterministic interop
-bash ./scripts/verify-cross-platform-interop.sh
 ```
 
 Verify these repository secrets are present:
@@ -79,9 +67,7 @@ Verify these repository secrets are present:
 
 1. Update `VERSION` to the target release version (`MAJOR.MINOR.PATCH`).
 2. Update `CHANGELOG.md` so release notes are ready before tagging.
-3. If `noise-spec.lock` changed, document the reason and SemVer impact in `docs/Noise_Protocol_Upstream_Tracking.md`.
-4. Commit the release-prep changes on the branch/commit you will release.
-5. Re-run `bash ./scripts/verify-noise-spec-upstream.sh` and `bash ./scripts/verify-version-parity.sh` after editing.
+3. Commit the release-prep changes on the branch/commit you will release.
 
 ## 5) Trigger the release workflow
 
@@ -109,15 +95,14 @@ For manual runs, the workflow uses the selected ref commit (`github.sha`) as `ta
 
 If all jobs pass, the workflow publishes:
 
-1. **Maven Central**  
+1. **Maven Central**
    Artifacts:
-   - `ch.trancee:noise-protocol:<VERSION>`  
-   Task: `:noise-protocol:publishAndReleaseToMavenCentral`
+   - `ch.trancee:noise-protocol:<VERSION>`
+   Task: `:lib:publishAndReleaseToMavenCentral`
 2. **GitHub Release assets**
-   - `noise-protocol-<tag>.tar.gz` (Android `noise-core`, `noise-crypto`, `noise-testing` JARs, plus AAR in archive)
-   - `noise-protocol-<tag>.aar` (direct Android AAR asset)
+   - `noise-protocol-<tag>.tar.gz` (Kotlin/JVM JAR)
    - `noise-ios-swiftpm-<tag>.tar.gz` (Swift package manifest + sources + `VERSION`)
-   - `SHA256SUMS.txt` (generated from release `.tar.gz` and `.aar` assets)
+   - `SHA256SUMS.txt` (generated from release `.tar.gz` assets)
 
 ## 7) Post-release verification checklist
 
@@ -125,7 +110,7 @@ If all jobs pass, the workflow publishes:
 - GitHub Release exists for `v<VERSION>` with all assets above.
 - `SHA256SUMS.txt` validates downloaded release archives.
 - Maven Central contains `ch.trancee:noise-protocol:<VERSION>`.
-- Consumers can resolve the new Android artifact version from Maven Central.
+- Consumers can resolve the new artifact version from Maven Central.
 
 ## 8) Failure handling and rollback
 

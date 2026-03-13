@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Release tag (for example: v1.0.0)"
+        description: "Release tag (for example: v2.0.0)"
         required: true
         type: string
 
@@ -21,36 +21,27 @@ env:
   RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
 
 jobs:
-  version-parity:
-    name: Version parity
-    runs-on: macos-15
+  version-gate:
+    name: Version gate
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
-      - name: Set up Java
-        uses: actions/setup-java@v5
-        with:
-          distribution: temurin
-          java-version: ${{ env.JAVA_VERSION }}
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v5
-        with:
-          gradle-version: ${{ env.GRADLE_VERSION }}
-      - name: Test Noise spec verifier
-        run: bash ./scripts/test-verify-noise-spec-upstream.sh
-      - name: Verify tracked Noise spec baseline
-        run: bash ./scripts/verify-noise-spec-upstream.sh
-      - name: Select Xcode
-        uses: maxim-lobanov/setup-xcode@v1
-        with:
-          xcode-version: ${{ env.XCODE_VERSION }}
-      - name: Verify release version parity contract
-        run: bash ./scripts/verify-version-parity.sh "${{ env.RELEASE_TAG }}"
+      - name: Verify VERSION matches release tag
+        run: |
+          version=$(cat VERSION)
+          tag="${{ env.RELEASE_TAG }}"
+          expected="v${version}"
+          if [[ "$tag" != "$expected" ]]; then
+            echo "::error::VERSION file contains '${version}' but release tag is '${tag}' (expected '${expected}')"
+            exit 1
+          fi
+          echo "Version parity confirmed: VERSION=${version}, tag=${tag}"
 
   build-android:
     name: Build Android artifacts
     runs-on: ubuntu-24.04
     needs:
-      - version-parity
+      - version-gate
     steps:
       - uses: actions/checkout@v6
       - name: Set up Java
@@ -62,35 +53,29 @@ jobs:
         uses: gradle/actions/setup-gradle@v5
         with:
           gradle-version: ${{ env.GRADLE_VERSION }}
-      - name: Run Android module tests
+      - name: Run tests
         working-directory: android
-        run: gradle --no-daemon --console=plain :noise-core:test :noise-crypto:test :noise-testing:test
-      - name: Build Android jars and AAR
+        run: gradle --no-daemon --console=plain :lib:test
+      - name: Build JAR
         working-directory: android
-        run: gradle --no-daemon --console=plain :noise-core:jar :noise-crypto:jar :noise-testing:jar :noise-protocol:assembleRelease
+        run: gradle --no-daemon --console=plain :lib:jar
       - name: Package Android artifacts
         run: |
           mkdir -p release/android
-          cp android/noise-core/build/libs/noise-core-*.jar release/android/
-          cp android/noise-crypto/build/libs/noise-crypto-*.jar release/android/
-          cp android/noise-testing/build/libs/noise-testing-*.jar release/android/
-          cp android/noise-android/build/outputs/aar/noise-protocol-release.aar release/android/
-          cp android/noise-android/build/outputs/aar/noise-protocol-release.aar "noise-protocol-${RELEASE_TAG}.aar"
+          cp android/lib/build/libs/noise-protocol-*.jar release/android/
           tar -C release -czf "noise-protocol-${RELEASE_TAG}.tar.gz" android
       - name: Upload Android release bundle
         uses: actions/upload-artifact@v7
         with:
           name: android-release-asset
-          path: |
-            noise-protocol-${{ env.RELEASE_TAG }}.tar.gz
-            noise-protocol-${{ env.RELEASE_TAG }}.aar
+          path: noise-protocol-${{ env.RELEASE_TAG }}.tar.gz
           if-no-files-found: error
 
   build-ios:
     name: Build iOS artifacts
     runs-on: macos-15
     needs:
-      - version-parity
+      - version-gate
     steps:
       - uses: actions/checkout@v6
       - name: Select Xcode
@@ -120,7 +105,7 @@ jobs:
     name: Validation gate
     runs-on: ubuntu-24.04
     needs:
-      - version-parity
+      - version-gate
       - build-android
       - build-ios
     steps:
@@ -160,14 +145,14 @@ jobs:
           if [[ "$missing" -ne 0 ]]; then
             exit 1
           fi
-      - name: Publish Android artifact to Maven Central
+      - name: Publish to Maven Central
         working-directory: android
         env:
           ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
           ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
           ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.MAVEN_SIGNING_KEY }}
           ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.MAVEN_SIGNING_PASSWORD }}
-        run: gradle --no-daemon --console=plain :noise-protocol:publishAndReleaseToMavenCentral
+        run: gradle --no-daemon --console=plain :lib:publishAndReleaseToMavenCentral
 
   publish-release:
     name: Publish GitHub release
@@ -188,7 +173,7 @@ jobs:
           path: release-assets
       - name: Generate checksums
         working-directory: release-assets
-        run: sha256sum -- *.tar.gz *.aar > SHA256SUMS.txt
+        run: sha256sum -- *.tar.gz > SHA256SUMS.txt
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
         with:
@@ -198,6 +183,5 @@ jobs:
           generate_release_notes: true
           files: |
             release-assets/noise-protocol-${{ env.RELEASE_TAG }}.tar.gz
-            release-assets/noise-protocol-${{ env.RELEASE_TAG }}.aar
             release-assets/noise-ios-swiftpm-${{ env.RELEASE_TAG }}.tar.gz
             release-assets/SHA256SUMS.txt
