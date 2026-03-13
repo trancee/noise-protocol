@@ -1,4 +1,3 @@
-import CryptoKit
 import Foundation
 
 /// Result of a completed handshake: two CipherStates for transport encryption.
@@ -16,6 +15,7 @@ public struct TransportState: Sendable {
 /// Top-level Noise handshake state machine.
 /// Processes handshake messages according to a pattern, then produces transport CipherStates.
 public final class HandshakeState: @unchecked Sendable {
+    private let suite: CipherSuite
     private let symmetricState: SymmetricState
     private var s: NoiseKeyPair?
     private var e: NoiseKeyPair?
@@ -34,6 +34,7 @@ public final class HandshakeState: @unchecked Sendable {
     /// - Parameters:
     ///   - pattern: The handshake pattern to use.
     ///   - initiator: True if this party initiates the handshake.
+    ///   - suite: The cipher suite to use. Defaults to 25519_ChaChaPoly_SHA256.
     ///   - prologue: Application-specific prologue data hashed into the handshake.
     ///   - s: Local static key pair (required for patterns that send/use a static key).
     ///   - e: Local ephemeral key pair (normally nil; set for testing with deterministic keys).
@@ -44,6 +45,7 @@ public final class HandshakeState: @unchecked Sendable {
     public init(
         pattern: HandshakePattern,
         initiator: Bool,
+        suite: CipherSuite = .noise_25519_ChaChaPoly_SHA256,
         prologue: Data = Data(),
         s: NoiseKeyPair? = nil,
         e: NoiseKeyPair? = nil,
@@ -52,7 +54,8 @@ public final class HandshakeState: @unchecked Sendable {
         psks: [Data] = [],
         keyPairGenerator: KeyPairGenerator = RandomKeyPairGenerator()
     ) {
-        self.symmetricState = SymmetricState()
+        self.suite = suite
+        self.symmetricState = SymmetricState(suite: suite)
         self.initiator = initiator
         self.s = s
         self.e = e
@@ -68,26 +71,7 @@ public final class HandshakeState: @unchecked Sendable {
         symmetricState.hasPSK = hasPSK
 
         // Construct protocol name
-        let protocolName: String
-        if hasPSK {
-            // Find PSK positions for the name
-            var pskPositions: [Int] = []
-            for (idx, mp) in pattern.messagePatterns.enumerated() {
-                if idx == 0 && mp.first == .psk {
-                    pskPositions.append(0)
-                }
-                if mp.last == .psk && !(idx == 0 && mp.first == .psk && mp.count == 1) {
-                    if idx == 0 && mp.first == .psk {
-                        // psk0 already added
-                    } else if mp.last == .psk {
-                        pskPositions.append(idx + 1)
-                    }
-                }
-            }
-            protocolName = "Noise_\(pattern.name)_25519_ChaChaPoly_SHA256"
-        } else {
-            protocolName = "Noise_\(pattern.name)_25519_ChaChaPoly_SHA256"
-        }
+        let protocolName = suite.protocolName(pattern: pattern.name)
 
         symmetricState.initializeSymmetric(protocolName: protocolName)
         symmetricState.mixHash(prologue)
@@ -204,20 +188,21 @@ public final class HandshakeState: @unchecked Sendable {
         let pattern = messagePatterns[messageIndex]
         messageIndex += 1
         var offset = 0
+        let dhlen = suite.dhlen
 
         for token in pattern {
             switch token {
             case .e:
-                guard message.count >= offset + DHLEN else { throw NoiseError.invalidMessage }
-                re = message[offset..<(offset + DHLEN)]
-                offset += DHLEN
+                guard message.count >= offset + dhlen else { throw NoiseError.invalidMessage }
+                re = Data(message[offset..<(offset + dhlen)])
+                offset += dhlen
                 symmetricState.mixHash(re!)
                 if symmetricState.hasPSK {
                     symmetricState.mixKey(re!)
                 }
 
             case .s:
-                let len = symmetricState.hasKey ? DHLEN + 16 : DHLEN
+                let len = symmetricState.hasKey ? dhlen + 16 : dhlen
                 guard message.count >= offset + len else { throw NoiseError.invalidMessage }
                 let temp = Data(message[offset..<(offset + len)])
                 offset += len

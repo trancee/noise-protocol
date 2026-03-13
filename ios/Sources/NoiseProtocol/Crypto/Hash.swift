@@ -33,3 +33,21 @@ public enum NoiseHash {
         return [output1, output2, output3]
     }
 }
+
+/// SHA-512 based hash functions for Noise protocol.
+public enum NoiseHashSHA512 {
+    public static let hashlen = 64
+    public static let blocklen = 128
+
+    public static func hash(_ data: Data) -> Data {
+        Data(SHA512.hash(data: data))
+    }
+
+    public static func hmacHash(key: Data, data: Data) -> Data {
+        let hmac = HMAC<SHA512>.authenticationCode(
+            for: data,
+            using: SymmetricKey(data: key)
+        )
+        return Data(hmac)
+    }
+}
