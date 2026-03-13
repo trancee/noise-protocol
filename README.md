@@ -24,18 +24,26 @@ noise-protocol/
 │   ├── lib/src/main/kotlin/com/noise/protocol/
 │   ├── lib/src/test/kotlin/com/noise/protocol/
 │   └── README.md           # Kotlin API docs & examples
+├── test-vectors/           # Shared cross-platform JSON test vectors (8 cipher suites × 7 patterns)
 └── VERSION                 # Canonical version source
 ```
 
-## Cipher Suite
+## Cipher Suites
 
-Both platforms implement `Noise_*_25519_ChaChaPoly_SHA256`:
+Both platforms support **8 cipher suites** — all combinations of 2 AEAD ciphers × 4 hash functions, with X25519 key exchange:
 
-| Primitive | Algorithm |
-|-----------|-----------|
-| Key exchange | X25519 |
-| Encryption | ChaCha20-Poly1305 |
-| Hashing | SHA-256 + HMAC-SHA256 + HKDF |
+| Suite Name | Cipher | Hash | HASHLEN |
+|------------|--------|------|---------|
+| `Noise_25519_ChaChaPoly_SHA256` | ChaCha20-Poly1305 | SHA-256 | 32 |
+| `Noise_25519_ChaChaPoly_SHA512` | ChaCha20-Poly1305 | SHA-512 | 64 |
+| `Noise_25519_ChaChaPoly_BLAKE2s` | ChaCha20-Poly1305 | BLAKE2s | 32 |
+| `Noise_25519_ChaChaPoly_BLAKE2b` | ChaCha20-Poly1305 | BLAKE2b | 64 |
+| `Noise_25519_AESGCM_SHA256` | AES-256-GCM | SHA-256 | 32 |
+| `Noise_25519_AESGCM_SHA512` | AES-256-GCM | SHA-512 | 64 |
+| `Noise_25519_AESGCM_BLAKE2s` | AES-256-GCM | BLAKE2s | 32 |
+| `Noise_25519_AESGCM_BLAKE2b` | AES-256-GCM | BLAKE2b | 64 |
+
+The default cipher suite is `Noise_25519_ChaChaPoly_SHA256`. Suites with 64-byte hashes (SHA-512, BLAKE2b) automatically truncate HKDF output to 32 bytes for cipher keys per the Noise spec.
 
 ## Supported Patterns
 
@@ -56,9 +64,16 @@ Both platforms implement `Noise_*_25519_ChaChaPoly_SHA256`:
 ```swift
 import NoiseProtocol
 
-// XX handshake - mutual authentication, no prior key knowledge
+// XX handshake with default cipher suite (ChaChaPoly_SHA256)
 let initiator = try HandshakeState(pattern: .XX, initiator: true, s: NoiseKeyPair())
 let responder = try HandshakeState(pattern: .XX, initiator: false, s: NoiseKeyPair())
+
+// XX handshake with a different cipher suite
+let initiator = try HandshakeState(
+    pattern: .XX, initiator: true,
+    suite: .noise_25519_AESGCM_SHA512,
+    s: NoiseKeyPair()
+)
 
 let (msg1, _) = try initiator.writeMessage()
 let _ = try responder.readMessage(msg1)
@@ -75,15 +90,24 @@ let pt = try initTransport!.receiveCipher.decryptWithAd(Data(), ct)
 ### Kotlin
 
 ```kotlin
+import com.noise.protocol.crypto.CipherSuite
 import com.noise.protocol.crypto.NoiseKeyPair
 import com.noise.protocol.pattern.HandshakePattern
 import com.noise.protocol.state.HandshakeState
 
+// XX handshake with default cipher suite (ChaChaPoly_SHA256)
 val initiator = HandshakeState(
     pattern = HandshakePattern.XX, initiator = true, s = NoiseKeyPair.generate()
 )
 val responder = HandshakeState(
     pattern = HandshakePattern.XX, initiator = false, s = NoiseKeyPair.generate()
+)
+
+// XX handshake with a different cipher suite
+val initiator = HandshakeState(
+    pattern = HandshakePattern.XX, initiator = true,
+    suite = CipherSuite.NOISE_25519_AESGCM_SHA512,
+    s = NoiseKeyPair.generate()
 )
 
 val (msg1, _) = initiator.writeMessage()
@@ -143,14 +167,14 @@ dependencies {
 ## Running Tests
 
 ```bash
-# iOS - 34 tests (7 test vector + 27 unit)
+# iOS - 36 tests (9 test vector + 27 unit)
 cd ios && swift test
 
-# Android - 37 tests (7 test vector + 30 unit)
+# Android - 87 tests (56 parameterized test vector + 1 XXfallback + 30 unit)
 cd android && ./gradlew test
 ```
 
-All test vectors validated against [cacophony](https://github.com/haskell-cryptography/cacophony) and [noise-c](https://github.com/rweather/noise-c) canonical outputs.
+Test vectors cover all 8 cipher suites × 7 patterns (NN, NK, KK, IK, XX, NKpsk0, IKpsk2) = 56 parameterized cases, plus XXfallback. Both platforms validate against [cacophony](https://github.com/haskell-cryptography/cacophony) and [noise-c](https://github.com/rweather/noise-c) canonical outputs using shared JSON fixtures in `test-vectors/`.
 
 ## Design Principles
 

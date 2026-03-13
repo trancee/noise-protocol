@@ -24,7 +24,7 @@ All notable changes to this project are documented in this file.
 - SHA-512 hash implementation (CryptoKit `SHA512` / JCA `MessageDigest("SHA-512")`).
 - Pure BLAKE2s (32-byte, 10-round) and BLAKE2b (64-byte, 12-round) hash implementations per RFC 7693, with standard HMAC construction (RFC 2104).
 - HASHLEN truncation for 64-byte hashes (SHA-512, BLAKE2b): `MixKey()` and `Split()` truncate HKDF output to 32 bytes for cipher keys per spec.
-- 42 cross-platform test vectors: 8 cipher suites × 5 patterns (NN, NK, KK, IK, XX) + 2 PSK fixtures (NKpsk0, IKpsk2) — shared JSON files in `test-vectors/`, validated on both platforms.
+- 42 cross-platform test vectors: 8 cipher suites × 5 patterns (NN, NK, KK, IK, XX) + 2 PSK fixtures (NKpsk0, IKpsk2) per suite — shared JSON files in `test-vectors/`, validated on both platforms.
 - `HandshakeState` accepts optional `suite` parameter (defaults to ChaChaPoly_SHA256 for backward compatibility).
 
 ## [2.0.0] — 2026-03-13
@@ -43,7 +43,7 @@ Complete rewrite of both iOS and Android implementations with a simplified, zero
 - Nonce exhaustion detection and 65,535-byte message limit enforcement.
 - Proper nonce preservation on decryption failure per spec.
 - Rekey support (`ENCRYPT(k, maxnonce, empty, zeros_32)`).
-- 36 iOS tests (9 test vector + 27 unit) and 39 Android tests (9 test vector + 30 unit).
+- 36 iOS tests (9 test vector + 27 unit) and 87 Android tests (57 test vector + 30 unit).
 - Cross-platform validation: identical output for same inputs on both platforms.
 - Test vectors validated against cacophony and noise-c canonical outputs.
 - Platform-specific README documentation with API reference and usage examples.

@@ -2,15 +2,31 @@
 
 A pure-Swift implementation of the [Noise Protocol Framework](https://noiseprotocol.org/noise.html) (revision 34). Zero external dependencies — all cryptography uses Apple CryptoKit.
 
-## Cipher Suite
+## Cipher Suites
 
-`Noise_*_25519_ChaChaPoly_SHA256`
+**8 cipher suites** — all combinations of 2 AEAD ciphers × 4 hash functions, with X25519 key exchange:
+
+| Constant | Cipher | Hash | HASHLEN | BLOCKLEN |
+|----------|--------|------|---------|----------|
+| `.noise_25519_ChaChaPoly_SHA256` | ChaCha20-Poly1305 | SHA-256 | 32 | 64 |
+| `.noise_25519_ChaChaPoly_SHA512` | ChaCha20-Poly1305 | SHA-512 | 64 | 128 |
+| `.noise_25519_ChaChaPoly_BLAKE2s` | ChaCha20-Poly1305 | BLAKE2s | 32 | 64 |
+| `.noise_25519_ChaChaPoly_BLAKE2b` | ChaCha20-Poly1305 | BLAKE2b | 64 | 128 |
+| `.noise_25519_AESGCM_SHA256` | AES-256-GCM | SHA-256 | 32 | 64 |
+| `.noise_25519_AESGCM_SHA512` | AES-256-GCM | SHA-512 | 64 | 128 |
+| `.noise_25519_AESGCM_BLAKE2s` | AES-256-GCM | BLAKE2s | 32 | 64 |
+| `.noise_25519_AESGCM_BLAKE2b` | AES-256-GCM | BLAKE2b | 64 | 128 |
+
+All suites use X25519 for Diffie-Hellman (DHLEN = 32). Suites with 64-byte hashes (SHA-512, BLAKE2b) automatically truncate HKDF output to 32 bytes for cipher keys per the Noise spec.
 
 | Primitive | Implementation |
 |-----------|---------------|
 | DH | X25519 via `Curve25519.KeyAgreement` |
-| AEAD | ChaCha20-Poly1305 via `ChaChaPoly` |
-| Hash | SHA-256 / HMAC / HKDF via `SHA256`, `HMAC<SHA256>` |
+| AEAD (ChaCha) | ChaCha20-Poly1305 via `ChaChaPoly` (nonce: 4 zero bytes + 8 LE) |
+| AEAD (AES) | AES-256-GCM via `AES.GCM` (nonce: 4 zero bytes + 8 BE) |
+| Hash | SHA-256 via `SHA256`, SHA-512 via `SHA512` |
+| Hash (BLAKE2) | Pure-Swift BLAKE2s (RFC 7693, 32-byte) and BLAKE2b (RFC 7693, 64-byte) |
+| HMAC/HKDF | `HMAC<SHA256>`, `HMAC<SHA512>`, or HMAC over BLAKE2 |
 
 ## Supported Patterns
 
@@ -48,7 +64,7 @@ Or in Xcode: **File → Add Package Dependencies** and point to this directory.
 ```swift
 import NoiseProtocol
 
-// Initiator
+// Initiator — default cipher suite (ChaChaPoly_SHA256)
 let initiator = try HandshakeState(
     pattern: .NN,
     initiator: true,
@@ -103,6 +119,41 @@ let (_, initTransport) = try responder.readMessage(msg3)
 
 // Both sides now have authenticated transport + remote static keys
 let remoteKey = initTransport!.remoteStaticKey  // initiator's static public key
+```
+
+### XX with AES-GCM + SHA-512
+
+```swift
+let initiator = try HandshakeState(
+    pattern: .XX,
+    initiator: true,
+    suite: .noise_25519_AESGCM_SHA512,
+    prologue: Data(),
+    s: NoiseKeyPair()
+)
+
+let responder = try HandshakeState(
+    pattern: .XX,
+    initiator: false,
+    suite: .noise_25519_AESGCM_SHA512,
+    prologue: Data(),
+    s: NoiseKeyPair()
+)
+
+// Same message flow as above — suite is transparent after construction
+```
+
+### XX with BLAKE2s
+
+```swift
+let initiator = try HandshakeState(
+    pattern: .XX,
+    initiator: true,
+    suite: .noise_25519_ChaChaPoly_BLAKE2s,
+    prologue: Data(),
+    s: NoiseKeyPair()
+)
+// Both sides must use the same cipher suite
 ```
 
 ### IK Handshake (Zero-RTT with Known Responder Key)
@@ -181,13 +232,14 @@ let fallbackResponder = try HandshakeState(
 HandshakeState(
     pattern: HandshakePattern,  // .NN, .XX, .IK, etc.
     initiator: Bool,
+    suite: CipherSuite = .noise_25519_ChaChaPoly_SHA256,  // cipher suite
     prologue: Data = Data(),
     s: NoiseKeyPair? = nil,     // local static key pair
     e: NoiseKeyPair? = nil,     // local ephemeral (testing only)
     rs: Data? = nil,            // remote static public key
     re: Data? = nil,            // remote ephemeral (fallback only)
     psks: [Data] = [],
-    keyPairGenerator: KeyPairGenerator = DefaultKeyPairGenerator()
+    keyPairGenerator: KeyPairGenerator = RandomKeyPairGenerator()
 )
 
 // Send a handshake message
@@ -230,6 +282,31 @@ HandshakePattern.named("XX") // dynamic lookup (throws on unknown)
 HandshakePattern.all         // [String: HandshakePattern] dictionary
 ```
 
+### CipherSuite
+
+```swift
+// Access cipher suites as static properties
+CipherSuite.noise_25519_ChaChaPoly_SHA256   // default
+CipherSuite.noise_25519_ChaChaPoly_SHA512
+CipherSuite.noise_25519_ChaChaPoly_BLAKE2s
+CipherSuite.noise_25519_ChaChaPoly_BLAKE2b
+CipherSuite.noise_25519_AESGCM_SHA256
+CipherSuite.noise_25519_AESGCM_SHA512
+CipherSuite.noise_25519_AESGCM_BLAKE2s
+CipherSuite.noise_25519_AESGCM_BLAKE2b
+
+// Properties
+suite.dhName      // "25519"
+suite.cipherName  // "ChaChaPoly" or "AESGCM"
+suite.hashName    // "SHA256", "SHA512", "BLAKE2s", or "BLAKE2b"
+suite.dhlen       // 32 (always, for X25519)
+suite.hashlen     // 32 (SHA256, BLAKE2s) or 64 (SHA512, BLAKE2b)
+suite.blocklen    // 64 (SHA256, BLAKE2s) or 128 (SHA512, BLAKE2b)
+
+// Generate protocol name string
+suite.protocolName(pattern: "XX")  // e.g. "Noise_XX_25519_ChaChaPoly_SHA256"
+```
+
 ### Error Handling
 
 All errors are `NoiseError` enum cases:
@@ -250,7 +327,7 @@ All errors are `NoiseError` enum cases:
 cd ios && swift test
 ```
 
-34 tests total: 7 test vector tests (validated against cacophony/noise-c canonical vectors) + 27 unit tests covering round-trips, error handling, crypto primitives, pattern definitions, and channel binding.
+36 tests total: 9 test vector tests (8 cipher suites × 7 patterns each + XXfallback, validated against cacophony/noise-c canonical vectors from shared `test-vectors/` JSON) + 27 unit tests covering round-trips, error handling, crypto primitives, pattern definitions, and channel binding.
 
 ## Architecture
 
@@ -258,9 +335,11 @@ cd ios && swift test
 Sources/NoiseProtocol/
 ├── NoiseError.swift              # Error enum
 ├── Crypto/
+│   ├── BLAKE2.swift              # Pure-Swift BLAKE2s + BLAKE2b (RFC 7693)
+│   ├── Cipher.swift              # ChaCha20-Poly1305 + AES-256-GCM AEAD
+│   ├── CipherSuite.swift         # Cipher suite definitions (8 suites)
 │   ├── DH.swift                  # X25519 key pairs + DH
-│   ├── Cipher.swift              # ChaCha20-Poly1305 AEAD
-│   └── Hash.swift                # SHA-256, HMAC-SHA256, HKDF
+│   └── Hash.swift                # SHA-256 + SHA-512, HMAC, HKDF
 ├── State/
 │   ├── CipherState.swift         # AEAD + nonce tracking
 │   ├── SymmetricState.swift      # Chaining key + handshake hash

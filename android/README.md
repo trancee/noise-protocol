@@ -2,15 +2,31 @@
 
 A pure-Kotlin implementation of the [Noise Protocol Framework](https://noiseprotocol.org/noise.html) (revision 34). Zero external dependencies — all cryptography uses native Java Cryptography Architecture (JCA/JCE).
 
-## Cipher Suite
+## Cipher Suites
 
-`Noise_*_25519_ChaChaPoly_SHA256`
+**8 cipher suites** — all combinations of 2 AEAD ciphers × 4 hash functions, with X25519 key exchange:
+
+| Constant | Cipher | Hash | HASHLEN | BLOCKLEN |
+|----------|--------|------|---------|----------|
+| `NOISE_25519_CHACHAPOLY_SHA256` | ChaCha20-Poly1305 | SHA-256 | 32 | 64 |
+| `NOISE_25519_CHACHAPOLY_SHA512` | ChaCha20-Poly1305 | SHA-512 | 64 | 128 |
+| `NOISE_25519_CHACHAPOLY_BLAKE2S` | ChaCha20-Poly1305 | BLAKE2s | 32 | 64 |
+| `NOISE_25519_CHACHAPOLY_BLAKE2B` | ChaCha20-Poly1305 | BLAKE2b | 64 | 128 |
+| `NOISE_25519_AESGCM_SHA256` | AES-256-GCM | SHA-256 | 32 | 64 |
+| `NOISE_25519_AESGCM_SHA512` | AES-256-GCM | SHA-512 | 64 | 128 |
+| `NOISE_25519_AESGCM_BLAKE2S` | AES-256-GCM | BLAKE2s | 32 | 64 |
+| `NOISE_25519_AESGCM_BLAKE2B` | AES-256-GCM | BLAKE2b | 64 | 128 |
+
+All suites use X25519 for Diffie-Hellman (DHLEN = 32). Suites with 64-byte hashes (SHA-512, BLAKE2b) automatically truncate HKDF output to 32 bytes for cipher keys per the Noise spec.
 
 | Primitive | Implementation |
 |-----------|---------------|
 | DH | X25519 via JCA `XDH` / `NamedParameterSpec.X25519` |
-| AEAD | ChaCha20-Poly1305 via `javax.crypto.Cipher` |
-| Hash | SHA-256 / HMAC-SHA256 via `MessageDigest`, `Mac` |
+| AEAD (ChaCha) | ChaCha20-Poly1305 via `javax.crypto.Cipher` (nonce: 4 zero bytes + 8 LE) |
+| AEAD (AES) | AES-256-GCM via `javax.crypto.Cipher("AES/GCM/NoPadding")` (nonce: 4 zero bytes + 8 BE) |
+| Hash | SHA-256 via `MessageDigest`, SHA-512 via `MessageDigest("SHA-512")` |
+| Hash (BLAKE2) | Pure-Kotlin BLAKE2s (RFC 7693, 32-byte) and BLAKE2b (RFC 7693, 64-byte) |
+| HMAC/HKDF | `Mac("HmacSHA256")`, `Mac("HmacSHA512")`, or HMAC over BLAKE2 |
 
 Requires **Java 11+** (for XDH support). Tested with Java 21.
 
@@ -46,6 +62,7 @@ Or publish to a local Maven repository and consume as a regular dependency.
 import com.noise.protocol.pattern.HandshakePattern
 import com.noise.protocol.state.HandshakeState
 
+// Default cipher suite (ChaChaPoly_SHA256)
 val initiator = HandshakeState(
     pattern = HandshakePattern.NN,
     initiator = true,
@@ -101,6 +118,43 @@ val (_, initTransport) = responder.readMessage(msg3)
 
 // Both sides now have authenticated transport + remote static keys
 val remoteKey = initTransport!!.remoteStaticKey
+```
+
+### XX with AES-GCM + SHA-512
+
+```kotlin
+import com.noise.protocol.crypto.CipherSuite
+
+val initiator = HandshakeState(
+    pattern = HandshakePattern.XX,
+    initiator = true,
+    suite = CipherSuite.NOISE_25519_AESGCM_SHA512,
+    prologue = ByteArray(0),
+    s = NoiseKeyPair.generate()
+)
+
+val responder = HandshakeState(
+    pattern = HandshakePattern.XX,
+    initiator = false,
+    suite = CipherSuite.NOISE_25519_AESGCM_SHA512,
+    prologue = ByteArray(0),
+    s = NoiseKeyPair.generate()
+)
+
+// Same message flow as above — suite is transparent after construction
+```
+
+### XX with BLAKE2s
+
+```kotlin
+val initiator = HandshakeState(
+    pattern = HandshakePattern.XX,
+    initiator = true,
+    suite = CipherSuite.NOISE_25519_CHACHAPOLY_BLAKE2S,
+    prologue = ByteArray(0),
+    s = NoiseKeyPair.generate()
+)
+// Both sides must use the same cipher suite
 ```
 
 ### IK Handshake (Zero-RTT with Known Responder Key)
@@ -179,6 +233,7 @@ val fallbackResponder = HandshakeState(
 HandshakeState(
     pattern: HandshakePattern,   // HandshakePattern.NN, .XX, .IK, etc.
     initiator: Boolean,
+    suite: CipherSuite = CipherSuite.NOISE_25519_CHACHAPOLY_SHA256,  // cipher suite
     prologue: ByteArray = ByteArray(0),
     s: NoiseKeyPair? = null,     // local static key pair
     e: NoiseKeyPair? = null,     // local ephemeral (testing only)
@@ -228,6 +283,31 @@ HandshakePattern.named("XX") // dynamic lookup (throws on unknown)
 HandshakePattern.all          // Map<String, HandshakePattern>
 ```
 
+### CipherSuite
+
+```kotlin
+// Access cipher suites as companion object constants
+CipherSuite.NOISE_25519_CHACHAPOLY_SHA256   // default
+CipherSuite.NOISE_25519_CHACHAPOLY_SHA512
+CipherSuite.NOISE_25519_CHACHAPOLY_BLAKE2S
+CipherSuite.NOISE_25519_CHACHAPOLY_BLAKE2B
+CipherSuite.NOISE_25519_AESGCM_SHA256
+CipherSuite.NOISE_25519_AESGCM_SHA512
+CipherSuite.NOISE_25519_AESGCM_BLAKE2S
+CipherSuite.NOISE_25519_AESGCM_BLAKE2B
+
+// Properties
+suite.dhName      // "25519"
+suite.cipherName  // "ChaChaPoly" or "AESGCM"
+suite.hashName    // "SHA256", "SHA512", "BLAKE2s", or "BLAKE2b"
+suite.dhlen       // 32 (always, for X25519)
+suite.hashlen     // 32 (SHA256, BLAKE2s) or 64 (SHA512, BLAKE2b)
+suite.blocklen    // 64 (SHA256, BLAKE2s) or 128 (SHA512, BLAKE2b)
+
+// Generate protocol name string
+suite.protocolName("XX")  // e.g. "Noise_XX_25519_ChaChaPoly_SHA256"
+```
+
 ### Error Handling
 
 All errors extend the sealed `NoiseException` class:
@@ -248,7 +328,7 @@ All errors extend the sealed `NoiseException` class:
 cd android && ./gradlew test
 ```
 
-37 tests total: 7 test vector tests (validated against cacophony/noise-c canonical vectors) + 30 unit tests covering round-trips, error handling, crypto primitives, pattern definitions, and channel binding.
+87 tests total: 56 parameterized test vector tests (8 cipher suites × 7 patterns each) + 1 XXfallback test (validated against cacophony/noise-c canonical vectors from shared `test-vectors/` JSON) + 30 unit tests covering round-trips, error handling, crypto primitives, pattern definitions, and channel binding.
 
 ## Architecture
 
@@ -256,9 +336,11 @@ cd android && ./gradlew test
 lib/src/main/kotlin/com/noise/protocol/
 ├── NoiseException.kt             # Sealed exception hierarchy
 ├── crypto/
+│   ├── BLAKE2.kt                # Pure-Kotlin BLAKE2s + BLAKE2b (RFC 7693)
+│   ├── Cipher.kt                # ChaCha20-Poly1305 + AES-256-GCM AEAD
+│   ├── CipherSuite.kt           # Cipher suite definitions (8 suites)
 │   ├── DH.kt                    # X25519 key pairs + DH via JCA
-│   ├── Cipher.kt                # ChaCha20-Poly1305 AEAD
-│   └── Hash.kt                  # SHA-256, HMAC-SHA256, HKDF
+│   └── Hash.kt                  # SHA-256 + SHA-512, HMAC, HKDF
 ├── state/
 │   ├── CipherState.kt           # AEAD + nonce tracking
 │   ├── SymmetricState.kt        # Chaining key + handshake hash
