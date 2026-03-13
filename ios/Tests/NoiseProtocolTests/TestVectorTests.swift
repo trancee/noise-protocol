@@ -111,95 +111,107 @@ private struct VectorFile: Codable {
         case keys, vectors
         case fallbackVectors = "fallback_vectors"
     }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        cipherSuite = try container.decode(String.self, forKey: .cipherSuite)
+        keys = try container.decode([String: String].self, forKey: .keys)
+        vectors = try container.decode([Vector].self, forKey: .vectors)
+        fallbackVectors = try container.decodeIfPresent([FallbackVector].self, forKey: .fallbackVectors) ?? []
+    }
 }
 
 // MARK: - Test Vector Tests
 
 final class TestVectorTests: XCTestCase {
 
-    // MARK: - JSON loading (once per test run)
+    // MARK: - Path resolution + JSON loading
 
-    private static let vectorFile: VectorFile = {
-        let testFileURL = URL(fileURLWithPath: #filePath)
+    private static let testVectorsDir: URL = {
+        URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent() // → Tests/NoiseProtocolTests/
             .deletingLastPathComponent() // → Tests/
             .deletingLastPathComponent() // → ios/
             .deletingLastPathComponent() // → repo root
             .appendingPathComponent("test-vectors")
-            .appendingPathComponent("noise_25519_ChaChaPoly_SHA256.json")
-        let data = try! Data(contentsOf: testFileURL)
-        return try! JSONDecoder().decode(VectorFile.self, from: data)
     }()
 
-    private var keys: [String: String] { Self.vectorFile.keys }
+    private static func loadVectorFile(_ fileName: String) -> VectorFile {
+        let url = testVectorsDir.appendingPathComponent("\(fileName).json")
+        let data = try! Data(contentsOf: url)
+        return try! JSONDecoder().decode(VectorFile.self, from: data)
+    }
 
-    /// Resolve a key name reference from the JSON `keys` object to raw bytes.
-    /// Returns `nil` when the key name is `nil` (JSON `null`).
-    private func resolveKey(_ keyName: String?) -> Data? {
-        guard let keyName = keyName, let hex = keys[keyName] else { return nil }
+    // MARK: - Pattern name → HandshakePattern mapping
+
+    private static let patternMap: [String: HandshakePattern] = [
+        "NN": .NN, "NK": .NK, "KK": .KK, "IK": .IK, "XX": .XX,
+        "NKpsk0": .NKpsk0, "IKpsk2": .IKpsk2,
+    ]
+
+    // MARK: - Key resolution helpers
+
+    private func resolveKey(_ keyName: String?, keys: [String: String]) -> Data? {
+        guard let keyName, let hex = keys[keyName] else { return nil }
         return Data(hex: hex)
     }
 
-    /// Resolve a key name that is expected to exist.
-    private func resolveKeyRequired(_ keyName: String) -> Data {
+    private func resolveKeyRequired(_ keyName: String, keys: [String: String]) -> Data {
         guard let hex = keys[keyName] else {
             fatalError("Key '\(keyName)' not found in test vector keys")
         }
         return Data(hex: hex)
     }
 
-    private func vector(forPattern pattern: String) -> Vector {
-        guard let v = Self.vectorFile.vectors.first(where: { $0.pattern == pattern }) else {
-            fatalError("No test vector found for pattern '\(pattern)'")
-        }
-        return v
+    // MARK: - ChaChaPoly suites
+
+    func testChaChaPoly_SHA256() throws {
+        try runAllVectors(fileName: "noise_25519_ChaChaPoly_SHA256", suite: .noise_25519_ChaChaPoly_SHA256)
     }
 
-    // MARK: NN
-
-    func testNN() throws {
-        try runVectorTest(forPattern: "NN", handshakePattern: .NN)
+    func testChaChaPoly_SHA512() throws {
+        try runAllVectors(fileName: "noise_25519_ChaChaPoly_SHA512", suite: .noise_25519_ChaChaPoly_SHA512)
     }
 
-    // MARK: NK
-
-    func testNK() throws {
-        try runVectorTest(forPattern: "NK", handshakePattern: .NK)
+    func testChaChaPoly_BLAKE2s() throws {
+        try runAllVectors(fileName: "noise_25519_ChaChaPoly_BLAKE2s", suite: .noise_25519_ChaChaPoly_BLAKE2s)
     }
 
-    // MARK: XX
-
-    func testXX() throws {
-        try runVectorTest(forPattern: "XX", handshakePattern: .XX)
+    func testChaChaPoly_BLAKE2b() throws {
+        try runAllVectors(fileName: "noise_25519_ChaChaPoly_BLAKE2b", suite: .noise_25519_ChaChaPoly_BLAKE2b)
     }
 
-    // MARK: IK
+    // MARK: - AESGCM suites
 
-    func testIK() throws {
-        try runVectorTest(forPattern: "IK", handshakePattern: .IK)
+    func testAESGCM_SHA256() throws {
+        try runAllVectors(fileName: "noise_25519_AESGCM_SHA256", suite: .noise_25519_AESGCM_SHA256)
     }
 
-    // MARK: NKpsk0
-
-    func testNKpsk0() throws {
-        try runVectorTest(forPattern: "NKpsk0", handshakePattern: .NKpsk0)
+    func testAESGCM_SHA512() throws {
+        try runAllVectors(fileName: "noise_25519_AESGCM_SHA512", suite: .noise_25519_AESGCM_SHA512)
     }
 
-    // MARK: IKpsk2
-
-    func testIKpsk2() throws {
-        try runVectorTest(forPattern: "IKpsk2", handshakePattern: .IKpsk2)
+    func testAESGCM_BLAKE2s() throws {
+        try runAllVectors(fileName: "noise_25519_AESGCM_BLAKE2s", suite: .noise_25519_AESGCM_BLAKE2s)
     }
 
-    // MARK: XXfallback
+    func testAESGCM_BLAKE2b() throws {
+        try runAllVectors(fileName: "noise_25519_AESGCM_BLAKE2b", suite: .noise_25519_AESGCM_BLAKE2b)
+    }
+
+    // MARK: - XXfallback (only present in ChaChaPoly_SHA256)
 
     func testXXfallback() throws {
-        let fb = Self.vectorFile.fallbackVectors[0]
-        let initEphemeral = resolveKeyRequired("init_ephemeral")
-        let respEphemeral = resolveKeyRequired("resp_ephemeral")
-        let initStatic = resolveKeyRequired("init_static")
-        let respStatic = resolveKeyRequired("resp_static")
-        let initEphPub = resolveKeyRequired("init_eph_pub")
+        let vf = Self.loadVectorFile("noise_25519_ChaChaPoly_SHA256")
+        let suite = CipherSuite.noise_25519_ChaChaPoly_SHA256
+        let keys = vf.keys
+        let fb = vf.fallbackVectors[0]
+
+        let initEphemeral = resolveKeyRequired("init_ephemeral", keys: keys)
+        let respEphemeral = resolveKeyRequired("resp_ephemeral", keys: keys)
+        let initStatic = resolveKeyRequired("init_static", keys: keys)
+        let respStatic = resolveKeyRequired("resp_static", keys: keys)
+        let initEphPub = resolveKeyRequired("init_eph_pub", keys: keys)
         let wrongRemoteStatic = Data(hex: fb.wrongRemoteStatic)
         let fallbackPrologue = Data(hex: fb.fallbackPrologue)
 
@@ -207,6 +219,7 @@ final class TestVectorTests: XCTestCase {
         let ikInitiator = HandshakeState(
             pattern: .IK,
             initiator: true,
+            suite: suite,
             prologue: fallbackPrologue,
             s: try NoiseKeyPair(privateKeyData: initStatic),
             rs: wrongRemoteStatic,
@@ -227,6 +240,7 @@ final class TestVectorTests: XCTestCase {
         let fallbackInitiator = HandshakeState(
             pattern: .XXfallback,
             initiator: true,
+            suite: suite,
             prologue: fallbackPrologue,
             s: try NoiseKeyPair(privateKeyData: respStatic),
             re: extractedEphemeral,
@@ -237,6 +251,7 @@ final class TestVectorTests: XCTestCase {
         let fallbackResponder = HandshakeState(
             pattern: .XXfallback,
             initiator: false,
+            suite: suite,
             prologue: fallbackPrologue,
             s: try NoiseKeyPair(privateKeyData: initStatic),
             e: try NoiseKeyPair(privateKeyData: initEphemeral),
@@ -277,33 +292,45 @@ final class TestVectorTests: XCTestCase {
         XCTAssertEqual(transportCt.hex, fb.transportMessage.ciphertext, "XXfallback transport ciphertext mismatch")
     }
 
-    // MARK: - Shared handshake runner
+    // MARK: - Shared test runners
 
-    /// Convenience wrapper that resolves a JSON vector by pattern name and runs the handshake test.
-    private func runVectorTest(forPattern patternName: String, handshakePattern: HandshakePattern) throws {
-        let v = vector(forPattern: patternName)
-        let handshakeMessages = v.handshakeMessages.map {
-            TestMessage(payload: Data(hex: $0.payload), ciphertext: Data(hex: $0.ciphertext))
-        }
-        let transportMessages = v.transportMessages.map {
-            TestMessage(payload: Data(hex: $0.payload), ciphertext: Data(hex: $0.ciphertext))
-        }
-        let psks = v.psks.map { resolveKeyRequired($0) }
+    /// Load all vectors for a given suite file and run each one.
+    private func runAllVectors(fileName: String, suite: CipherSuite) throws {
+        let vf = Self.loadVectorFile(fileName)
+        for vector in vf.vectors {
+            guard let pattern = Self.patternMap[vector.pattern] else {
+                XCTFail("Unknown pattern '\(vector.pattern)' in \(fileName)")
+                continue
+            }
+            let keys = vf.keys
+            let handshakeMessages = vector.handshakeMessages.map {
+                TestMessage(payload: Data(hex: $0.payload), ciphertext: Data(hex: $0.ciphertext))
+            }
+            let transportMessages = vector.transportMessages.map {
+                TestMessage(payload: Data(hex: $0.payload), ciphertext: Data(hex: $0.ciphertext))
+            }
+            let psks = vector.psks.map { resolveKeyRequired($0, keys: keys) }
 
-        try runHandshakeTest(
-            pattern: handshakePattern,
-            initiatorStatic: resolveKey(v.initStatic),
-            responderStatic: resolveKey(v.respStatic),
-            initiatorRemoteStatic: resolveKey(v.initRemoteStatic),
-            responderRemoteStatic: resolveKey(v.respRemoteStatic),
-            psks: psks,
-            handshakeMessages: handshakeMessages,
-            transportMessages: transportMessages,
-            expectedHandshakeHash: Data(hex: v.handshakeHash)
-        )
+            try runHandshakeTest(
+                suite: suite,
+                keys: keys,
+                pattern: pattern,
+                initiatorStatic: resolveKey(vector.initStatic, keys: keys),
+                responderStatic: resolveKey(vector.respStatic, keys: keys),
+                initiatorRemoteStatic: resolveKey(vector.initRemoteStatic, keys: keys),
+                responderRemoteStatic: resolveKey(vector.respRemoteStatic, keys: keys),
+                psks: psks,
+                handshakeMessages: handshakeMessages,
+                transportMessages: transportMessages,
+                expectedHandshakeHash: Data(hex: vector.handshakeHash),
+                label: "\(fileName)/\(vector.pattern)"
+            )
+        }
     }
 
     private func runHandshakeTest(
+        suite: CipherSuite,
+        keys: [String: String],
         pattern: HandshakePattern,
         initiatorStatic: Data?,
         responderStatic: Data?,
@@ -312,11 +339,12 @@ final class TestVectorTests: XCTestCase {
         psks: [Data] = [],
         handshakeMessages: [TestMessage],
         transportMessages: [TestMessage],
-        expectedHandshakeHash: Data
+        expectedHandshakeHash: Data,
+        label: String = ""
     ) throws {
-        let prologue = resolveKeyRequired("prologue")
-        let initEphemeral = resolveKeyRequired("init_ephemeral")
-        let respEphemeral = resolveKeyRequired("resp_ephemeral")
+        let prologue = resolveKeyRequired("prologue", keys: keys)
+        let initEphemeral = resolveKeyRequired("init_ephemeral", keys: keys)
+        let respEphemeral = resolveKeyRequired("resp_ephemeral", keys: keys)
 
         let initS = try initiatorStatic.map { try NoiseKeyPair(privateKeyData: $0) }
         let respS = try responderStatic.map { try NoiseKeyPair(privateKeyData: $0) }
@@ -324,6 +352,7 @@ final class TestVectorTests: XCTestCase {
         let initiator = HandshakeState(
             pattern: pattern,
             initiator: true,
+            suite: suite,
             prologue: prologue,
             s: initS,
             rs: initiatorRemoteStatic,
@@ -333,6 +362,7 @@ final class TestVectorTests: XCTestCase {
         let responder = HandshakeState(
             pattern: pattern,
             initiator: false,
+            suite: suite,
             prologue: prologue,
             s: respS,
             rs: responderRemoteStatic,
@@ -348,44 +378,44 @@ final class TestVectorTests: XCTestCase {
             let isInitiatorSend = (i % 2 == 0)
             if isInitiatorSend {
                 let (ct, transport) = try initiator.writeMessage(payload: msg.payload)
-                XCTAssertEqual(ct.hex, msg.ciphertext.hex, "Handshake msg \(i+1) ciphertext mismatch")
+                XCTAssertEqual(ct.hex, msg.ciphertext.hex, "\(label) handshake msg \(i+1) ciphertext mismatch")
                 if let t = transport { initTransport = t }
 
                 let (payload, rTransport) = try responder.readMessage(ct)
-                XCTAssertEqual(payload, msg.payload, "Handshake msg \(i+1) payload mismatch")
+                XCTAssertEqual(payload, msg.payload, "\(label) handshake msg \(i+1) payload mismatch")
                 if let t = rTransport { respTransport = t }
             } else {
                 let (ct, transport) = try responder.writeMessage(payload: msg.payload)
-                XCTAssertEqual(ct.hex, msg.ciphertext.hex, "Handshake msg \(i+1) ciphertext mismatch")
+                XCTAssertEqual(ct.hex, msg.ciphertext.hex, "\(label) handshake msg \(i+1) ciphertext mismatch")
                 if let t = transport { respTransport = t }
 
                 let (payload, iTransport) = try initiator.readMessage(ct)
-                XCTAssertEqual(payload, msg.payload, "Handshake msg \(i+1) payload mismatch")
+                XCTAssertEqual(payload, msg.payload, "\(label) handshake msg \(i+1) payload mismatch")
                 if let t = iTransport { initTransport = t }
             }
         }
 
         // Verify handshake completed
-        XCTAssertNotNil(initTransport, "Initiator handshake did not complete")
-        XCTAssertNotNil(respTransport, "Responder handshake did not complete")
+        XCTAssertNotNil(initTransport, "\(label) initiator handshake did not complete")
+        XCTAssertNotNil(respTransport, "\(label) responder handshake did not complete")
 
         // Verify handshake hash
-        XCTAssertEqual(initTransport!.handshakeHash.hex, expectedHandshakeHash.hex, "Initiator handshake hash mismatch")
-        XCTAssertEqual(respTransport!.handshakeHash.hex, expectedHandshakeHash.hex, "Responder handshake hash mismatch")
+        XCTAssertEqual(initTransport!.handshakeHash.hex, expectedHandshakeHash.hex, "\(label) initiator handshake hash mismatch")
+        XCTAssertEqual(respTransport!.handshakeHash.hex, expectedHandshakeHash.hex, "\(label) responder handshake hash mismatch")
 
         // Process transport messages
         for (i, msg) in transportMessages.enumerated() {
             let isInitiatorSend = ((handshakeMessages.count + i) % 2 == 0)
             if isInitiatorSend {
                 let ct = try initTransport!.sendCipher.encryptWithAd(Data(), plaintext: msg.payload)
-                XCTAssertEqual(ct.hex, msg.ciphertext.hex, "Transport msg \(i+1) ciphertext mismatch")
+                XCTAssertEqual(ct.hex, msg.ciphertext.hex, "\(label) transport msg \(i+1) ciphertext mismatch")
                 let pt = try respTransport!.receiveCipher.decryptWithAd(Data(), ciphertext: ct)
-                XCTAssertEqual(pt, msg.payload, "Transport msg \(i+1) payload mismatch")
+                XCTAssertEqual(pt, msg.payload, "\(label) transport msg \(i+1) payload mismatch")
             } else {
                 let ct = try respTransport!.sendCipher.encryptWithAd(Data(), plaintext: msg.payload)
-                XCTAssertEqual(ct.hex, msg.ciphertext.hex, "Transport msg \(i+1) ciphertext mismatch")
+                XCTAssertEqual(ct.hex, msg.ciphertext.hex, "\(label) transport msg \(i+1) ciphertext mismatch")
                 let pt = try initTransport!.receiveCipher.decryptWithAd(Data(), ciphertext: ct)
-                XCTAssertEqual(pt, msg.payload, "Transport msg \(i+1) payload mismatch")
+                XCTAssertEqual(pt, msg.payload, "\(label) transport msg \(i+1) payload mismatch")
             }
         }
     }

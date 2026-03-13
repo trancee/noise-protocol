@@ -1,17 +1,18 @@
 package com.noise.protocol
 
-import com.noise.protocol.crypto.NoiseKeyPair
-import com.noise.protocol.crypto.NoiseKeyPairGenerator
-import com.noise.protocol.crypto.DeterministicKeyPairGenerator
-import com.noise.protocol.crypto.DHLEN
+import com.noise.protocol.crypto.*
 import com.noise.protocol.pattern.HandshakePattern
 import com.noise.protocol.state.HandshakeState
 import com.noise.protocol.state.TransportState
 import org.json.JSONObject
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.Arguments
+import org.junit.jupiter.params.provider.MethodSource
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import java.util.stream.Stream
 
 /** Sequential key pair generator serving keys in order. */
 class SequentialKeyPairGenerator(private val keys: List<ByteArray>) : NoiseKeyPairGenerator {
@@ -37,25 +38,46 @@ data class TestMessage(val payload: ByteArray, val ciphertext: ByteArray)
 class TestVectorTests {
 
     companion object {
-        private val json: JSONObject = run {
-            val stream = TestVectorTests::class.java.getResourceAsStream(
-                "/noise_25519_ChaChaPoly_SHA256.json"
-            ) ?: error("Test vector JSON not found on classpath")
+        private val SUITE_FILES = listOf(
+            "noise_25519_ChaChaPoly_SHA256",
+            "noise_25519_ChaChaPoly_SHA512",
+            "noise_25519_ChaChaPoly_BLAKE2s",
+            "noise_25519_ChaChaPoly_BLAKE2b",
+            "noise_25519_AESGCM_SHA256",
+            "noise_25519_AESGCM_SHA512",
+            "noise_25519_AESGCM_BLAKE2s",
+            "noise_25519_AESGCM_BLAKE2b",
+        )
+
+        private val SUITE_MAP = mapOf(
+            "noise_25519_ChaChaPoly_SHA256" to CipherSuite.NOISE_25519_CHACHAPOLY_SHA256,
+            "noise_25519_ChaChaPoly_SHA512" to CipherSuite.NOISE_25519_CHACHAPOLY_SHA512,
+            "noise_25519_ChaChaPoly_BLAKE2s" to CipherSuite.NOISE_25519_CHACHAPOLY_BLAKE2S,
+            "noise_25519_ChaChaPoly_BLAKE2b" to CipherSuite.NOISE_25519_CHACHAPOLY_BLAKE2B,
+            "noise_25519_AESGCM_SHA256" to CipherSuite.NOISE_25519_AESGCM_SHA256,
+            "noise_25519_AESGCM_SHA512" to CipherSuite.NOISE_25519_AESGCM_SHA512,
+            "noise_25519_AESGCM_BLAKE2s" to CipherSuite.NOISE_25519_AESGCM_BLAKE2S,
+            "noise_25519_AESGCM_BLAKE2b" to CipherSuite.NOISE_25519_AESGCM_BLAKE2B,
+        )
+
+        private val suiteData: Map<String, JSONObject> = SUITE_FILES.associateWith { name ->
+            val stream = TestVectorTests::class.java.getResourceAsStream("/$name.json")
+                ?: error("Test vector JSON not found: $name.json")
             JSONObject(stream.bufferedReader().readText())
         }
 
-        private val keys: JSONObject = json.getJSONObject("keys")
+        // Default suite data for the XXfallback test
+        private val defaultJson = suiteData["noise_25519_ChaChaPoly_SHA256"]!!
+        private val defaultKeys = defaultJson.getJSONObject("keys")
 
-        /** Resolve a key reference (string name) to its hex bytes via the keys object. */
-        fun resolveKey(keyName: String): ByteArray = keys.getString(keyName).hexToBytes()
+        fun resolveKey(keys: JSONObject, keyName: String): ByteArray =
+            keys.getString(keyName).hexToBytes()
 
-        /** Resolve a nullable key field: null in JSON → null, otherwise lookup in keys. */
-        fun resolveOptionalKey(vector: JSONObject, field: String): ByteArray? {
+        fun resolveOptionalKey(keys: JSONObject, vector: JSONObject, field: String): ByteArray? {
             if (vector.isNull(field)) return null
-            return resolveKey(vector.getString(field))
+            return resolveKey(keys, vector.getString(field))
         }
 
-        /** Parse handshake or transport messages from a JSONArray of {payload, ciphertext}. */
         fun parseMessages(array: org.json.JSONArray): List<TestMessage> =
             (0 until array.length()).map { i ->
                 val obj = array.getJSONObject(i)
@@ -65,66 +87,57 @@ class TestVectorTests {
                 )
             }
 
-        /** Find a standard vector by pattern name. */
-        fun findVector(pattern: String): JSONObject {
-            val vectors = json.getJSONArray("vectors")
-            for (i in 0 until vectors.length()) {
-                val v = vectors.getJSONObject(i)
-                if (v.getString("pattern") == pattern) return v
-            }
-            error("No vector found for pattern: $pattern")
-        }
-
-        /** Find a fallback vector by pattern name. */
-        fun findFallbackVector(pattern: String): JSONObject {
-            val vectors = json.getJSONArray("fallback_vectors")
-            for (i in 0 until vectors.length()) {
-                val v = vectors.getJSONObject(i)
-                if (v.getString("pattern") == pattern) return v
-            }
-            error("No fallback vector found for pattern: $pattern")
-        }
-
-        /** Resolve the PSK list from a vector's "psks" array of key name strings. */
-        fun resolvePsks(vector: JSONObject): List<ByteArray> {
+        fun resolvePsks(keys: JSONObject, vector: JSONObject): List<ByteArray> {
             val arr = vector.getJSONArray("psks")
-            return (0 until arr.length()).map { resolveKey(arr.getString(it)) }
+            return (0 until arr.length()).map { resolveKey(keys, arr.getString(it)) }
+        }
+
+        /** Provides test arguments for all suite x pattern combinations. */
+        @JvmStatic
+        fun allVectorTests(): Stream<Arguments> {
+            val args = mutableListOf<Arguments>()
+            for ((suiteName, json) in suiteData) {
+                val suite = SUITE_MAP[suiteName]!!
+                val vectors = json.getJSONArray("vectors")
+                for (i in 0 until vectors.length()) {
+                    val vector = vectors.getJSONObject(i)
+                    val pattern = vector.getString("pattern")
+                    val displayName = "${suite.cipherName}_${suite.hashName}/$pattern"
+                    args.add(Arguments.of(displayName, suiteName, pattern))
+                }
+            }
+            return args.stream()
         }
     }
 
-    // MARK: - Standard pattern tests
+    // MARK: - Parameterized test for all suite x pattern combinations
 
-    @Test
-    fun testNN() = runStandardVectorTest("NN")
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("allVectorTests")
+    fun testVector(displayName: String, suiteName: String, patternName: String) {
+        val json = suiteData[suiteName]!!
+        val suite = SUITE_MAP[suiteName]!!
+        val keys = json.getJSONObject("keys")
+        val vectors = json.getJSONArray("vectors")
 
-    @Test
-    fun testNK() = runStandardVectorTest("NK")
+        var vector: JSONObject? = null
+        for (i in 0 until vectors.length()) {
+            val v = vectors.getJSONObject(i)
+            if (v.getString("pattern") == patternName) { vector = v; break }
+        }
+        assertNotNull(vector, "Vector not found: $suiteName/$patternName")
 
-    @Test
-    fun testXX() = runStandardVectorTest("XX")
-
-    @Test
-    fun testIK() = runStandardVectorTest("IK")
-
-    @Test
-    fun testNKpsk0() = runStandardVectorTest("NKpsk0")
-
-    @Test
-    fun testIKpsk2() = runStandardVectorTest("IKpsk2")
-
-    private fun runStandardVectorTest(patternName: String) {
-        val vector = findVector(patternName)
-
-        val initiatorStatic = resolveOptionalKey(vector, "init_static")
-        val responderStatic = resolveOptionalKey(vector, "resp_static")
-        val initiatorRemoteStatic = resolveOptionalKey(vector, "init_remote_static")
-        val responderRemoteStatic = resolveOptionalKey(vector, "resp_remote_static")
-        val psks = resolvePsks(vector)
+        val initiatorStatic = resolveOptionalKey(keys, vector, "init_static")
+        val responderStatic = resolveOptionalKey(keys, vector, "resp_static")
+        val initiatorRemoteStatic = resolveOptionalKey(keys, vector, "init_remote_static")
+        val responderRemoteStatic = resolveOptionalKey(keys, vector, "resp_remote_static")
+        val psks = resolvePsks(keys, vector)
         val handshakeMessages = parseMessages(vector.getJSONArray("handshake_messages"))
         val transportMessages = parseMessages(vector.getJSONArray("transport_messages"))
         val expectedHash = vector.getString("handshake_hash").hexToBytes()
 
         runHandshakeTest(
+            suite = suite,
             pattern = HandshakePattern.named(patternName),
             initiatorStatic = initiatorStatic,
             responderStatic = responderStatic,
@@ -133,20 +146,29 @@ class TestVectorTests {
             psks = psks,
             handshakeMessages = handshakeMessages,
             transportMessages = transportMessages,
-            expectedHandshakeHash = expectedHash
+            expectedHandshakeHash = expectedHash,
+            keys = keys
         )
     }
 
-    // MARK: XXfallback
+    // MARK: - XXfallback (only in ChaChaPoly_SHA256)
 
     @Test
     fun testXXfallback() {
-        val vector = findFallbackVector("XXfallback")
-        val initEphemeral = resolveKey("init_ephemeral")
-        val respEphemeral = resolveKey("resp_ephemeral")
-        val initStatic = resolveKey("init_static")
-        val respStatic = resolveKey("resp_static")
-        val initEphPub = resolveKey("init_eph_pub")
+        val keys = defaultKeys
+        val fallbackVectors = defaultJson.getJSONArray("fallback_vectors")
+        var vector: JSONObject? = null
+        for (i in 0 until fallbackVectors.length()) {
+            val v = fallbackVectors.getJSONObject(i)
+            if (v.getString("pattern") == "XXfallback") { vector = v; break }
+        }
+        assertNotNull(vector, "XXfallback vector not found")
+
+        val initEphemeral = resolveKey(keys, "init_ephemeral")
+        val respEphemeral = resolveKey(keys, "resp_ephemeral")
+        val initStatic = resolveKey(keys, "init_static")
+        val respStatic = resolveKey(keys, "resp_static")
+        val initEphPub = resolveKey(keys, "init_eph_pub")
 
         val wrongRemoteStatic = vector.getString("wrong_remote_static").hexToBytes()
         val fallbackPrologue = vector.getString("fallback_prologue").hexToBytes()
@@ -178,7 +200,7 @@ class TestVectorTests {
         val extractedEphemeral = ikMsg1.copyOfRange(0, DHLEN)
         assertContentEquals(initEphPub, extractedEphemeral)
 
-        // Step 3: Set up XXfallback — responder becomes initiator
+        // Step 3: Set up XXfallback -- responder becomes initiator
         val fallbackInitiator = HandshakeState(
             pattern = HandshakePattern.XXfallback,
             initiator = true,
@@ -237,6 +259,7 @@ class TestVectorTests {
     // MARK: - Shared handshake runner
 
     private fun runHandshakeTest(
+        suite: CipherSuite,
         pattern: HandshakePattern,
         initiatorStatic: ByteArray?,
         responderStatic: ByteArray?,
@@ -245,11 +268,12 @@ class TestVectorTests {
         psks: List<ByteArray> = emptyList(),
         handshakeMessages: List<TestMessage>,
         transportMessages: List<TestMessage>,
-        expectedHandshakeHash: ByteArray
+        expectedHandshakeHash: ByteArray,
+        keys: JSONObject
     ) {
-        val prologue = resolveKey("prologue")
-        val initEphemeral = resolveKey("init_ephemeral")
-        val respEphemeral = resolveKey("resp_ephemeral")
+        val prologue = resolveKey(keys, "prologue")
+        val initEphemeral = resolveKey(keys, "init_ephemeral")
+        val respEphemeral = resolveKey(keys, "resp_ephemeral")
 
         val initS = initiatorStatic?.let { NoiseKeyPair.fromPrivateKey(it) }
         val respS = responderStatic?.let { NoiseKeyPair.fromPrivateKey(it) }
@@ -257,6 +281,7 @@ class TestVectorTests {
         val initiator = HandshakeState(
             pattern = pattern,
             initiator = true,
+            suite = suite,
             prologue = prologue,
             s = initS,
             rs = initiatorRemoteStatic,
@@ -266,6 +291,7 @@ class TestVectorTests {
         val responder = HandshakeState(
             pattern = pattern,
             initiator = false,
+            suite = suite,
             prologue = prologue,
             s = respS,
             rs = responderRemoteStatic,
