@@ -1,4 +1,5 @@
 import Foundation
+import BlakeHash
 
 /// Bundles all cryptographic operations for a Noise cipher suite.
 public struct CipherSuite: Sendable {

@@ -1,0 +1,15 @@
+{
+  "originHash" : "318fbf901a024ded2201224c4b908d2d8d30ceed316ade69337580abc30eeade",
+  "pins" : [
+    {
+      "identity" : "blake-hash",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/trancee/blake-hash.git",
+      "state" : {
+        "revision" : "988771698e12a573fcb99882f276a435230d0735",
+        "version" : "1.1.0"
+      }
+    }
+  ],
+  "version" : 3
+}

@@ -2,7 +2,7 @@
 
 ## Project overview
 
-This is a Noise Protocol Framework implementation targeting mobile: **Swift** (iOS/macOS with CryptoKit) and **Kotlin** (Android with native platform APIs). The goal is a spec-conformant (revision 34) implementation built from primitives, not wrapping an existing Noise library. **No external dependencies** — use only platform-native crypto libraries.
+This is a Noise Protocol Framework implementation targeting mobile: **Swift** (iOS/macOS with CryptoKit) and **Kotlin** (Android with native platform APIs). The goal is a spec-conformant (revision 34) implementation built from primitives, not wrapping an existing Noise library. Uses platform-native crypto libraries plus [`blake-hash`](https://github.com/trancee/blake-hash) for BLAKE2 hashing.
 
 ## Architecture
 
@@ -33,7 +33,7 @@ After the handshake completes, `Split()` returns two `CipherState` objects: `c1`
 - Target Swift 6+ / Xcode 16+ if using Swift Testing (`@Test`, `#expect`).
 
 ### Kotlin
-- **No external dependencies** — use only `java.security`, `javax.crypto`, and Android platform APIs.
+- Uses `java.security`, `javax.crypto`, Android platform APIs, and [`blake-hash`](https://github.com/trancee/blake-hash) (`ch.trancee:blake-hash:1.1.0`) for BLAKE2 hashing.
 - `javax.crypto.Cipher("ChaCha20-Poly1305")` for AEAD (API 28+, which is the minimum for this project).
 - `java.security.KeyPairGenerator("XDH")` with `NamedParameterSpec("X25519")` for DH key generation (API 33+ / Java 11+). Use `KeyAgreement("XDH")` for the shared secret computation.
 - `javax.crypto.Mac("HmacSHA256")` and `java.security.MessageDigest("SHA-256")` for hashing.

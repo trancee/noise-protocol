@@ -21,6 +21,7 @@ kotlin {
 }
 
 dependencies {
+    implementation("ch.trancee:blake-hash:1.1.0")
     testImplementation(kotlin("test"))
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
     testImplementation("org.json:json:20240303")

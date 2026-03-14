@@ -15,9 +15,13 @@ let package = Package(
             targets: ["NoiseProtocol"]
         )
     ],
+    dependencies: [
+        .package(url: "https://github.com/trancee/blake-hash.git", from: "1.1.0")
+    ],
     targets: [
         .target(
             name: "NoiseProtocol",
+            dependencies: [.product(name: "BlakeHash", package: "blake-hash")],
             path: "Sources/NoiseProtocol"
         ),
         .testTarget(

@@ -22,10 +22,14 @@ All notable changes to this project are documented in this file.
   - `Noise_25519_AESGCM_BLAKE2b`
 - AES-256-GCM cipher implementation (CryptoKit `AES.GCM` / JCA `AES/GCM/NoPadding`).
 - SHA-512 hash implementation (CryptoKit `SHA512` / JCA `MessageDigest("SHA-512")`).
-- Pure BLAKE2s (32-byte, 10-round) and BLAKE2b (64-byte, 12-round) hash implementations per RFC 7693, with standard HMAC construction (RFC 2104).
+- BLAKE2s (32-byte, 10-round) and BLAKE2b (64-byte, 12-round) hash support via [`blake-hash`](https://github.com/trancee/blake-hash) library, with standard HMAC construction (RFC 2104).
 - HASHLEN truncation for 64-byte hashes (SHA-512, BLAKE2b): `MixKey()` and `Split()` truncate HKDF output to 32 bytes for cipher keys per spec.
 - 42 cross-platform test vectors: 8 cipher suites × 5 patterns (NN, NK, KK, IK, XX) + 2 PSK fixtures (NKpsk0, IKpsk2) per suite — shared JSON files in `test-vectors/`, validated on both platforms.
 - `HandshakeState` accepts optional `suite` parameter (defaults to ChaChaPoly_SHA256 for backward compatibility).
+
+### Changed
+
+- Replaced custom BLAKE2s/BLAKE2b implementations with [`blake-hash`](https://github.com/trancee/blake-hash) library (v1.1.0). Added as SPM dependency (iOS) and Maven Central dependency (Android). No API changes — all existing BLAKE2 cipher suites and test vectors are unaffected.
 
 ## [2.0.0] — 2026-03-13
 

@@ -1,5 +1,7 @@
 package com.noise.protocol.crypto
 
+import blake.hash.BLAKE2b
+import blake.hash.BLAKE2s
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 
@@ -64,14 +66,14 @@ class CipherSuite(
             { key, data -> NoiseHashSHA512.hmacHash(key, data) }
 
         // BLAKE2s lambdas (HMAC via RFC 2104, NOT BLAKE2's built-in keying)
-        private val blake2sHash: (ByteArray) -> ByteArray = { Blake2s.hash(it) }
+        private val blake2sHash: (ByteArray) -> ByteArray = { BLAKE2s.hash(it) }
         private val blake2sHmacHash: (ByteArray, ByteArray) -> ByteArray =
-            { key, data -> hmac(Blake2s::hash, 64, key, data) }
+            { key, data -> hmac(BLAKE2s::hash, 64, key, data) }
 
         // BLAKE2b lambdas
-        private val blake2bHash: (ByteArray) -> ByteArray = { Blake2b.hash(it) }
+        private val blake2bHash: (ByteArray) -> ByteArray = { BLAKE2b.hash(it) }
         private val blake2bHmacHash: (ByteArray, ByteArray) -> ByteArray =
-            { key, data -> hmac(Blake2b::hash, 128, key, data) }
+            { key, data -> hmac(BLAKE2b::hash, 128, key, data) }
 
         /** Standard HMAC construction (RFC 2104) for BLAKE2 hashes. */
         private fun hmac(

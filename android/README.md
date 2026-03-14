@@ -1,6 +1,6 @@
 # NoiseProtocol — Kotlin/JVM
 
-A pure-Kotlin implementation of the [Noise Protocol Framework](https://noiseprotocol.org/noise.html) (revision 34). Zero external dependencies — all cryptography uses native Java Cryptography Architecture (JCA/JCE).
+A Kotlin implementation of the [Noise Protocol Framework](https://noiseprotocol.org/noise.html) (revision 34). Uses native Java Cryptography Architecture (JCA/JCE) for core cryptography and [`blake-hash`](https://github.com/trancee/blake-hash) for BLAKE2 hashing.
 
 ## Cipher Suites
 
@@ -25,7 +25,7 @@ All suites use X25519 for Diffie-Hellman (DHLEN = 32). Suites with 64-byte hashe
 | AEAD (ChaCha) | ChaCha20-Poly1305 via `javax.crypto.Cipher` (nonce: 4 zero bytes + 8 LE) |
 | AEAD (AES) | AES-256-GCM via `javax.crypto.Cipher("AES/GCM/NoPadding")` (nonce: 4 zero bytes + 8 BE) |
 | Hash | SHA-256 via `MessageDigest`, SHA-512 via `MessageDigest("SHA-512")` |
-| Hash (BLAKE2) | Pure-Kotlin BLAKE2s (RFC 7693, 32-byte) and BLAKE2b (RFC 7693, 64-byte) |
+| Hash (BLAKE2) | BLAKE2s (RFC 7693, 32-byte) and BLAKE2b (RFC 7693, 64-byte) via [`blake-hash`](https://github.com/trancee/blake-hash) |
 | HMAC/HKDF | `Mac("HmacSHA256")`, `Mac("HmacSHA512")`, or HMAC over BLAKE2 |
 
 Requires **Java 11+** (for XDH support). Tested with Java 21.
@@ -336,7 +336,6 @@ cd android && ./gradlew test
 lib/src/main/kotlin/com/noise/protocol/
 ├── NoiseException.kt             # Sealed exception hierarchy
 ├── crypto/
-│   ├── BLAKE2.kt                # Pure-Kotlin BLAKE2s + BLAKE2b (RFC 7693)
 │   ├── Cipher.kt                # ChaCha20-Poly1305 + AES-256-GCM AEAD
 │   ├── CipherSuite.kt           # Cipher suite definitions (8 suites)
 │   ├── DH.kt                    # X25519 key pairs + DH via JCA

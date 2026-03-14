@@ -1,6 +1,6 @@
 # NoiseProtocol — Swift
 
-A pure-Swift implementation of the [Noise Protocol Framework](https://noiseprotocol.org/noise.html) (revision 34). Zero external dependencies — all cryptography uses Apple CryptoKit.
+A Swift implementation of the [Noise Protocol Framework](https://noiseprotocol.org/noise.html) (revision 34). Uses Apple CryptoKit for core cryptography and [`blake-hash`](https://github.com/trancee/blake-hash) for BLAKE2 hashing.
 
 ## Cipher Suites
 
@@ -25,7 +25,7 @@ All suites use X25519 for Diffie-Hellman (DHLEN = 32). Suites with 64-byte hashe
 | AEAD (ChaCha) | ChaCha20-Poly1305 via `ChaChaPoly` (nonce: 4 zero bytes + 8 LE) |
 | AEAD (AES) | AES-256-GCM via `AES.GCM` (nonce: 4 zero bytes + 8 BE) |
 | Hash | SHA-256 via `SHA256`, SHA-512 via `SHA512` |
-| Hash (BLAKE2) | Pure-Swift BLAKE2s (RFC 7693, 32-byte) and BLAKE2b (RFC 7693, 64-byte) |
+| Hash (BLAKE2) | BLAKE2s (RFC 7693, 32-byte) and BLAKE2b (RFC 7693, 64-byte) via [`blake-hash`](https://github.com/trancee/blake-hash) |
 | HMAC/HKDF | `HMAC<SHA256>`, `HMAC<SHA512>`, or HMAC over BLAKE2 |
 
 ## Supported Patterns
@@ -335,7 +335,6 @@ cd ios && swift test
 Sources/NoiseProtocol/
 ├── NoiseError.swift              # Error enum
 ├── Crypto/
-│   ├── BLAKE2.swift              # Pure-Swift BLAKE2s + BLAKE2b (RFC 7693)
 │   ├── Cipher.swift              # ChaCha20-Poly1305 + AES-256-GCM AEAD
 │   ├── CipherSuite.swift         # Cipher suite definitions (8 suites)
 │   ├── DH.swift                  # X25519 key pairs + DH

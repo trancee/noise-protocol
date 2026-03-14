@@ -1,6 +1,6 @@
 # Noise Protocol Library (Android + iOS)
 
-Feature-complete implementations of the [Noise Protocol Framework](https://noiseprotocol.org/noise.html) (revision 34) for **iOS** and **Android**, with zero external dependencies.
+Feature-complete implementations of the [Noise Protocol Framework](https://noiseprotocol.org/noise.html) (revision 34) for **iOS** and **Android**, with minimal external dependencies.
 
 ## What is Noise?
 
@@ -178,7 +178,7 @@ Test vectors cover all 8 cipher suites × 7 patterns (NN, NK, KK, IK, XX, NKpsk0
 
 ## Design Principles
 
-- **Zero dependencies** — only platform-native crypto APIs
+- **Minimal dependencies** — platform-native crypto APIs plus [`blake-hash`](https://github.com/trancee/blake-hash) for BLAKE2
 - **Spec conformance** — Noise Protocol Framework revision 34
 - **Feature parity** — identical behavior and API shape across platforms
 - **Testability** — injectable key generation for deterministic test vectors
