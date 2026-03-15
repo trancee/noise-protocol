@@ -116,8 +116,8 @@ class RoundTripTests {
         assertNotNull(respTransport)
 
         // Transport phase
-        val ct = initTransport!!.sendCipher.encryptWithAd(ByteArray(0), "transport".toByteArray())
-        val pt = respTransport!!.receiveCipher.decryptWithAd(ByteArray(0), ct)
+        val ct = initTransport.sendCipher.encryptWithAd(ByteArray(0), "transport".toByteArray())
+        val pt = respTransport.receiveCipher.decryptWithAd(ByteArray(0), ct)
         assertContentEquals("transport".toByteArray(), pt)
     }
 
@@ -152,8 +152,8 @@ class RoundTripTests {
         assertNotNull(respT)
 
         // Bidirectional transport
-        val ct1 = respT!!.sendCipher.encryptWithAd(ByteArray(0), "from init".toByteArray())
-        val pt1 = initT!!.receiveCipher.decryptWithAd(ByteArray(0), ct1)
+        val ct1 = respT.sendCipher.encryptWithAd(ByteArray(0), "from init".toByteArray())
+        val pt1 = initT.receiveCipher.decryptWithAd(ByteArray(0), ct1)
         assertContentEquals("from init".toByteArray(), pt1)
 
         val ct2 = initT.sendCipher.encryptWithAd(ByteArray(0), "from resp".toByteArray())
@@ -408,8 +408,8 @@ class ChannelBindingTests {
         assertNotNull(initT)
         assertNotNull(respT)
         assertContentEquals(
-            initT!!.handshakeHash,
-            respT!!.handshakeHash,
+            initT.handshakeHash,
+            respT.handshakeHash,
             "Both sides should have same handshake hash"
         )
     }
@@ -441,8 +441,8 @@ class ChannelBindingTests {
 
         assertNotNull(initT)
         assertNotNull(respT)
-        assertContentEquals(respKp.publicKey, respT!!.remoteStaticKey, "Initiator should know responder's static key")
-        assertContentEquals(initKp.publicKey, initT!!.remoteStaticKey, "Responder should know initiator's static key")
+        assertContentEquals(respKp.publicKey, respT.remoteStaticKey, "Initiator should know responder's static key")
+        assertContentEquals(initKp.publicKey, initT.remoteStaticKey, "Responder should know initiator's static key")
     }
 }
 

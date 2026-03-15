@@ -245,8 +245,8 @@ class TestVectorTests {
         assertNotNull(fbInitTransport)
 
         // Handshake hash
-        assertEquals(expectedHash.toHex(), fbInitTransport!!.handshakeHash.toHex())
-        assertEquals(expectedHash.toHex(), fbRespTransport!!.handshakeHash.toHex())
+        assertEquals(expectedHash.toHex(), fbInitTransport.handshakeHash.toHex())
+        assertEquals(expectedHash.toHex(), fbRespTransport.handshakeHash.toHex())
 
         // Transport: fallback initiator (original responder) sends
         val transportCt = fbInitTransport.sendCipher.encryptWithAd(ByteArray(0), transportPayload)
@@ -327,21 +327,21 @@ class TestVectorTests {
         assertNotNull(initTransport, "Initiator handshake did not complete")
         assertNotNull(respTransport, "Responder handshake did not complete")
 
-        assertEquals(expectedHandshakeHash.toHex(), initTransport!!.handshakeHash.toHex(), "Initiator handshake hash mismatch")
-        assertEquals(expectedHandshakeHash.toHex(), respTransport!!.handshakeHash.toHex(), "Responder handshake hash mismatch")
+        assertEquals(expectedHandshakeHash.toHex(), initTransport.handshakeHash.toHex(), "Initiator handshake hash mismatch")
+        assertEquals(expectedHandshakeHash.toHex(), respTransport.handshakeHash.toHex(), "Responder handshake hash mismatch")
 
         // Process transport messages
         for ((i, msg) in transportMessages.withIndex()) {
             val isInitiatorSend = ((handshakeMessages.size + i) % 2 == 0)
             if (isInitiatorSend) {
-                val ct = initTransport!!.sendCipher.encryptWithAd(ByteArray(0), msg.payload)
+                val ct = initTransport.sendCipher.encryptWithAd(ByteArray(0), msg.payload)
                 assertEquals(msg.ciphertext.toHex(), ct.toHex(), "Transport msg ${i+1} ciphertext mismatch")
-                val pt = respTransport!!.receiveCipher.decryptWithAd(ByteArray(0), ct)
+                val pt = respTransport.receiveCipher.decryptWithAd(ByteArray(0), ct)
                 assertContentEquals(msg.payload, pt, "Transport msg ${i+1} payload mismatch")
             } else {
-                val ct = respTransport!!.sendCipher.encryptWithAd(ByteArray(0), msg.payload)
+                val ct = respTransport.sendCipher.encryptWithAd(ByteArray(0), msg.payload)
                 assertEquals(msg.ciphertext.toHex(), ct.toHex(), "Transport msg ${i+1} ciphertext mismatch")
-                val pt = initTransport!!.receiveCipher.decryptWithAd(ByteArray(0), ct)
+                val pt = initTransport.receiveCipher.decryptWithAd(ByteArray(0), ct)
                 assertContentEquals(msg.payload, pt, "Transport msg ${i+1} payload mismatch")
             }
         }
