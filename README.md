@@ -156,7 +156,7 @@ See the [Noise spec](https://noiseprotocol.org/noise.html#handshake-pattern-basi
 ```swift
 // Package.swift
 dependencies: [
-    .package(url: "https://github.com/trancee/noise-protocol.git", from: "2.0.0")
+    .package(url: "https://github.com/trancee/noise-protocol.git", from: "2.0.2")
 ]
 ```
 
@@ -182,7 +182,7 @@ Test vectors cover 8 cipher suites × 5 base patterns (NN, NK, KK, IK, XX) = 40,
 
 ## Design Principles
 
-- **Minimal dependencies** — platform-native crypto APIs plus [`blake-hash`](https://github.com/trancee/blake-hash) for BLAKE2
+- **Minimal dependencies** — platform-native crypto APIs plus native C BLAKE2 (iOS) and [`blake-hash`](https://github.com/trancee/blake-hash) (Android)
 - **Spec conformance** — Noise Protocol Framework revision 34
 - **Feature parity** — identical behavior and API shape across platforms
 - **Testability** — injectable key generation for deterministic test vectors
