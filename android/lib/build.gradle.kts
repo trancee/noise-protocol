@@ -40,7 +40,7 @@ sourceSets {
 }
 
 mavenPublishing {
-    publishToMavenCentral(com.vanniktech.maven.publish.SonatypeHost.CENTRAL_PORTAL)
+    publishToMavenCentral()
     signAllPublications()
     coordinates("ch.trancee", "noise-protocol", version.toString())
 
