@@ -24,7 +24,7 @@ All notable changes to this project are documented in this file.
 - SHA-512 hash implementation (CryptoKit `SHA512` / JCA `MessageDigest("SHA-512")`).
 - BLAKE2s (32-byte, 10-round) and BLAKE2b (64-byte, 12-round) hash support via [`blake-hash`](https://github.com/trancee/blake-hash) library, with standard HMAC construction (RFC 2104).
 - HASHLEN truncation for 64-byte hashes (SHA-512, BLAKE2b): `MixKey()` and `Split()` truncate HKDF output to 32 bytes for cipher keys per spec.
-- 42 cross-platform test vectors: 8 cipher suites × 5 patterns (NN, NK, KK, IK, XX) + 2 PSK fixtures (NKpsk0, IKpsk2) per suite — shared JSON files in `test-vectors/`, validated on both platforms.
+- 43 cross-platform test vectors: 8 cipher suites × 5 base patterns (NN, NK, KK, IK, XX) + 2 PSK patterns (NKpsk0, IKpsk2) for ChaChaPoly_SHA256 + 1 XXfallback — shared JSON files in `test-vectors/`, validated on both platforms.
 - `HandshakeState` accepts optional `suite` parameter (defaults to ChaChaPoly_SHA256 for backward compatibility).
 
 ### Changed

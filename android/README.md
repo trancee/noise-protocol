@@ -28,7 +28,7 @@ All suites use X25519 for Diffie-Hellman (DHLEN = 32). Suites with 64-byte hashe
 | Hash (BLAKE2) | BLAKE2s (RFC 7693, 32-byte) and BLAKE2b (RFC 7693, 64-byte) via [`blake-hash`](https://github.com/trancee/blake-hash) |
 | HMAC/HKDF | `Mac("HmacSHA256")`, `Mac("HmacSHA512")`, or HMAC over BLAKE2 |
 
-Requires **Java 11+** (for XDH support). Tested with Java 21.
+Requires **Java 21+**.
 
 ## Supported Patterns
 
@@ -328,7 +328,7 @@ All errors extend the sealed `NoiseException` class:
 cd android && ./gradlew test
 ```
 
-87 tests total: 56 parameterized test vector tests (8 cipher suites × 7 patterns each) + 1 XXfallback test (validated against cacophony/noise-c canonical vectors from shared `test-vectors/` JSON) + 30 unit tests covering round-trips, error handling, crypto primitives, pattern definitions, and channel binding.
+73 tests total: 42 parameterized test vector tests (8 cipher suites × 5 base patterns, plus NKpsk0 and IKpsk2 for ChaChaPoly_SHA256) + 1 XXfallback test (validated against cacophony/noise-c canonical vectors from shared `test-vectors/` JSON) + 30 unit tests covering round-trips, error handling, crypto primitives, pattern definitions, and channel binding.
 
 ## Architecture
 

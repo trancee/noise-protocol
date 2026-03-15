@@ -24,7 +24,7 @@ noise-protocol/
 │   ├── lib/src/main/kotlin/com/noise/protocol/
 │   ├── lib/src/test/kotlin/com/noise/protocol/
 │   └── README.md           # Kotlin API docs & examples
-├── test-vectors/           # Shared cross-platform JSON test vectors (8 cipher suites × 7 patterns)
+├── test-vectors/           # Shared cross-platform JSON test vectors (8 cipher suites)
 └── VERSION                 # Canonical version source
 ```
 
@@ -141,9 +141,7 @@ See the [Noise spec](https://noiseprotocol.org/noise.html#handshake-pattern-basi
 |----------|---------|----------------|
 | iOS | 16.0 | Apple CryptoKit |
 | macOS | 13.0 | Apple CryptoKit |
-| watchOS | 9.0 | Apple CryptoKit |
-| tvOS | 16.0 | Apple CryptoKit |
-| JVM | Java 11+ | JCA/JCE (native) |
+| JVM | Java 21+ | JCA/JCE (native) |
 
 ## Installation
 
@@ -170,11 +168,11 @@ dependencies {
 # iOS - 36 tests (9 test vector + 27 unit)
 cd ios && swift test
 
-# Android - 87 tests (56 parameterized test vector + 1 XXfallback + 30 unit)
+# Android - 73 tests (42 parameterized test vector + 1 XXfallback + 30 unit)
 cd android && ./gradlew test
 ```
 
-Test vectors cover all 8 cipher suites × 7 patterns (NN, NK, KK, IK, XX, NKpsk0, IKpsk2) = 56 parameterized cases, plus XXfallback. Both platforms validate against [cacophony](https://github.com/haskell-cryptography/cacophony) and [noise-c](https://github.com/rweather/noise-c) canonical outputs using shared JSON fixtures in `test-vectors/`.
+Test vectors cover 8 cipher suites × 5 base patterns (NN, NK, KK, IK, XX) = 40, plus 2 PSK patterns (NKpsk0, IKpsk2) for ChaChaPoly_SHA256, plus XXfallback — 43 test vectors total. Both platforms validate against [cacophony](https://github.com/haskell-cryptography/cacophony) and [noise-c](https://github.com/rweather/noise-c) canonical outputs using shared JSON fixtures in `test-vectors/`.
 
 ## Design Principles
 

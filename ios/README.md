@@ -40,7 +40,7 @@ All suites use X25519 for Diffie-Hellman (DHLEN = 32). Suites with 64-byte hashe
 
 ## Platform Requirements
 
-- iOS 16+, macOS 13+, watchOS 9+, tvOS 16+
+- iOS 16+, macOS 13+
 - Swift 6.0+
 
 ## Installation
@@ -327,7 +327,7 @@ All errors are `NoiseError` enum cases:
 cd ios && swift test
 ```
 
-36 tests total: 9 test vector tests (8 cipher suites × 7 patterns each + XXfallback, validated against cacophony/noise-c canonical vectors from shared `test-vectors/` JSON) + 27 unit tests covering round-trips, error handling, crypto primitives, pattern definitions, and channel binding.
+36 tests total: 9 test vector tests (8 cipher suites × 5 base patterns each, plus PSK and XXfallback for ChaChaPoly_SHA256, validated against cacophony/noise-c canonical vectors from shared `test-vectors/` JSON) + 27 unit tests covering round-trips, error handling, crypto primitives, pattern definitions, and channel binding.
 
 ## Architecture
 
