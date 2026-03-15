@@ -1,6 +1,6 @@
 # NoiseProtocol — Swift
 
-A Swift implementation of the [Noise Protocol Framework](https://noiseprotocol.org/noise.html) (revision 34). Uses Apple CryptoKit for core cryptography and [`blake-hash`](https://github.com/trancee/blake-hash) for BLAKE2 hashing.
+A Swift implementation of the [Noise Protocol Framework](https://noiseprotocol.org/noise.html) (revision 34). Uses Apple CryptoKit for core cryptography and a native C BLAKE2 implementation (`CBLAKE2`) for BLAKE2 hashing.
 
 ## Cipher Suites
 
@@ -25,8 +25,8 @@ All suites use X25519 for Diffie-Hellman (DHLEN = 32). Suites with 64-byte hashe
 | AEAD (ChaCha) | ChaCha20-Poly1305 via `ChaChaPoly` (nonce: 4 zero bytes + 8 LE) |
 | AEAD (AES) | AES-256-GCM via `AES.GCM` (nonce: 4 zero bytes + 8 BE) |
 | Hash | SHA-256 via `SHA256`, SHA-512 via `SHA512` |
-| Hash (BLAKE2) | BLAKE2s (RFC 7693, 32-byte) and BLAKE2b (RFC 7693, 64-byte) via [`blake-hash`](https://github.com/trancee/blake-hash) |
-| HMAC/HKDF | `HMAC<SHA256>`, `HMAC<SHA512>`, or HMAC over BLAKE2 |
+| Hash (BLAKE2) | BLAKE2s (RFC 7693, 32-byte) and BLAKE2b (RFC 7693, 64-byte) via native C implementation (`CBLAKE2` target, compiled with `-O3`) |
+| HMAC/HKDF | `HMAC<SHA256>`, `HMAC<SHA512>` via CryptoKit; BLAKE2 HMAC/HKDF via native C (zero heap allocation) |
 
 ## Supported Patterns
 
@@ -51,7 +51,7 @@ Add to your `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/trancee/noise-protocol.git", from: "2.0.0")
+    .package(url: "https://github.com/trancee/noise-protocol.git", from: "2.0.2")
 ]
 ```
 
@@ -336,17 +336,22 @@ cd ios && swift test
 ## Architecture
 
 ```
-Sources/NoiseProtocol/
-├── NoiseError.swift              # Error enum
-├── Crypto/
-│   ├── Cipher.swift              # ChaCha20-Poly1305 + AES-256-GCM AEAD
-│   ├── CipherSuite.swift         # Cipher suite definitions (8 suites)
-│   ├── DH.swift                  # X25519 key pairs + DH
-│   └── Hash.swift                # SHA-256 + SHA-512, HMAC, HKDF
-├── State/
-│   ├── CipherState.swift         # AEAD + nonce tracking
-│   ├── SymmetricState.swift      # Chaining key + handshake hash
-│   └── HandshakeState.swift      # Full handshake state machine
-└── Pattern/
-    └── HandshakePattern.swift    # All pattern definitions
+Sources/
+├── CBLAKE2/                          # Native C BLAKE2 implementation
+│   ├── include/blake2.h              # Public API (hash, HMAC, HKDF)
+│   ├── blake2s.c                     # BLAKE2s (32-byte, 10-round)
+│   └── blake2b.c                     # BLAKE2b (64-byte, 12-round)
+└── NoiseProtocol/
+    ├── NoiseError.swift              # Error enum
+    ├── Crypto/
+    │   ├── Cipher.swift              # ChaCha20-Poly1305 + AES-256-GCM AEAD
+    │   ├── CipherSuite.swift         # Cipher suite definitions (8 suites)
+    │   ├── DH.swift                  # X25519 key pairs + DH
+    │   └── Hash.swift                # SHA-256 + SHA-512, HMAC, HKDF
+    ├── State/
+    │   ├── CipherState.swift         # AEAD + nonce tracking
+    │   ├── SymmetricState.swift      # Chaining key + handshake hash
+    │   └── HandshakeState.swift      # Full handshake state machine
+    └── Pattern/
+        └── HandshakePattern.swift    # All pattern definitions
 ```

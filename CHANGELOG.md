@@ -9,36 +9,29 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+## [2.0.2] — 2026-03-15
+
 ### Added
 
-- Pluggable cipher suite abstraction (`CipherSuite` struct in Swift, class in Kotlin) supporting 8 cipher suites:
-  - `Noise_25519_ChaChaPoly_SHA256` (default — backward compatible)
-  - `Noise_25519_ChaChaPoly_SHA512`
-  - `Noise_25519_ChaChaPoly_BLAKE2s`
-  - `Noise_25519_ChaChaPoly_BLAKE2b`
-  - `Noise_25519_AESGCM_SHA256`
-  - `Noise_25519_AESGCM_SHA512`
-  - `Noise_25519_AESGCM_BLAKE2s`
-  - `Noise_25519_AESGCM_BLAKE2b`
-- AES-256-GCM cipher implementation (CryptoKit `AES.GCM` / JCA `AES/GCM/NoPadding`).
-- SHA-512 hash implementation (CryptoKit `SHA512` / JCA `MessageDigest("SHA-512")`).
-- BLAKE2s (32-byte, 10-round) and BLAKE2b (64-byte, 12-round) hash support via [`blake-hash`](https://github.com/trancee/blake-hash) library, with standard HMAC construction (RFC 2104).
-- HASHLEN truncation for 64-byte hashes (SHA-512, BLAKE2b): `MixKey()` and `Split()` truncate HKDF output to 32 bytes for cipher keys per spec.
-- 43 cross-platform test vectors: 8 cipher suites × 5 base patterns (NN, NK, KK, IK, XX) + 2 PSK patterns (NKpsk0, IKpsk2) for ChaChaPoly_SHA256 + 1 XXfallback — shared JSON files in `test-vectors/`, validated on both platforms.
-- `HandshakeState` accepts optional `suite` parameter (defaults to ChaChaPoly_SHA256 for backward compatibility).
-- Benchmark test suite for all cipher suites × patterns with transport throughput and XXfallback measurements.
-- Comprehensive [BENCHMARK.md](BENCHMARK.md) with cross-platform results and performance analysis.
+- Native C BLAKE2 implementation (`CBLAKE2` SPM target) for iOS — hash, HMAC, and HKDF run entirely in C with zero heap allocation, compiled with `-O3` for optimized ARM code.
+- Native HKDF override path for BLAKE2 suites on iOS, eliminating intermediate `Data` allocations in `MixKey()` and `Split()`.
 
 ### Changed
 
-- Replaced custom BLAKE2s/BLAKE2b implementations with [`blake-hash`](https://github.com/trancee/blake-hash) library (v1.1.0). Added as SPM dependency (iOS) and Maven Central dependency (Android). No API changes — all existing BLAKE2 cipher suites and test vectors are unaffected.
+- iOS BLAKE2 cipher suites now use the `CBLAKE2` C target instead of the pure-Swift `blake-hash` wrapper for hash, HMAC, and HKDF operations. The `blake-hash` SPM dependency is retained. Android continues to use the pure-Kotlin `blake-hash` library.
 
 ### Performance
 
-- **iOS handshake ~22% faster**: cached DH public key computation, pre-allocated HKDF counter constants, optimized BLAKE2 HMAC ipad/opad loop, pre-sized handshake output buffer.
-- **Android AES-GCM transport 2–3× faster**: `ThreadLocal` caching of all JCA provider instances (`Cipher`, `MessageDigest`, `Mac`, `KeyPairGenerator`, `KeyFactory`, `KeyAgreement`) eliminates ~35 `getInstance()` provider lookups per handshake.
-- **Android handshake 6–10% faster**: JCA provider caching removes per-call overhead from DH, hash, and HMAC operations.
-- **Both platforms**: HKDF uses `System.arraycopy` / pre-allocated constants instead of allocating counter bytes on every call.
+- **iOS BLAKE2 handshakes 27–45% faster**: BLAKE2s and BLAKE2b suites now outperform SHA-256 suites on iOS thanks to the native C compression function and zero-allocation HMAC/HKDF path.
+
+## [2.0.1] — 2026-03-15
+
+### Fixed
+
+- Upgraded maven-publish plugin to fix Central Portal deployment naming.
+- Enabled Gradle configuration cache for faster Android builds.
+- Removed unnecessary non-null assertions in Android tests.
+- Enabled test logging to show standard output/error streams during test runs.
 
 ## [2.0.0] — 2026-03-13
 
@@ -62,11 +55,20 @@ Complete rewrite of both iOS and Android implementations with a simplified, zero
 - Platform-specific README documentation with API reference and usage examples.
 - `.claude/skills/` with Noise Protocol, Swift, and Android expert knowledge.
 - `.github/copilot-instructions.md` for AI-assisted development guidance.
+- Pluggable cipher suite abstraction (`CipherSuite` struct in Swift, class in Kotlin) supporting 8 cipher suites: ChaChaPoly and AESGCM × SHA-256, SHA-512, BLAKE2s, and BLAKE2b — all with X25519 DH.
+- AES-256-GCM cipher implementation (CryptoKit `AES.GCM` / JCA `AES/GCM/NoPadding`).
+- SHA-512 hash implementation (CryptoKit `SHA512` / JCA `MessageDigest("SHA-512")`).
+- BLAKE2s (32-byte) and BLAKE2b (64-byte) hash support via [`blake-hash`](https://github.com/trancee/blake-hash) library (v1.1.0), with standard HMAC construction (RFC 2104).
+- HASHLEN truncation for 64-byte hashes (SHA-512, BLAKE2b): `MixKey()` and `Split()` truncate HKDF output to 32 bytes for cipher keys per spec.
+- 43 cross-platform test vectors: 8 cipher suites × 5 base patterns (NN, NK, KK, IK, XX) + 2 PSK patterns (NKpsk0, IKpsk2) for ChaChaPoly_SHA256 + 1 XXfallback — shared JSON files in `test-vectors/`.
+- `HandshakeState` accepts optional `suite` parameter (defaults to ChaChaPoly_SHA256 for backward compatibility).
+- Benchmark test suite for all cipher suites × patterns with transport throughput and XXfallback measurements.
+- Comprehensive [BENCHMARK.md](BENCHMARK.md) with cross-platform results and performance analysis.
 
 ### Changed
 
 - **BREAKING**: Simplified project structure from multi-module (noise-core, noise-crypto, noise-testing, noise-android on Android; NoiseCore, NoiseCryptoAdapters, NoiseTestHarness on iOS) to single-module per platform.
-- **BREAKING**: Zero external dependencies — removed BigInt (iOS X448), BouncyCastle, and all third-party crypto adapters. Uses only CryptoKit (Swift) and JCA/JCE (Kotlin).
+- **BREAKING**: Minimal external dependencies — removed BigInt (iOS X448), BouncyCastle, and all third-party crypto adapters. Uses CryptoKit (Swift) and JCA/JCE (Kotlin) for core crypto, plus [`blake-hash`](https://github.com/trancee/blake-hash) (v1.1.0) for BLAKE2 hashing.
 - **BREAKING**: Simplified API surface — single `HandshakeState` entry point replaces the previous multi-layer factory/adapter pattern.
 - Default cipher suite is `Noise_*_25519_ChaChaPoly_SHA256`; pluggable via `CipherSuite` parameter.
 - Swift package URL changed from tag-based multi-target to single `NoiseProtocol` target.
@@ -76,7 +78,7 @@ Complete rewrite of both iOS and Android implementations with a simplified, zero
 - Multi-module project structure (noise-core, noise-crypto, noise-testing, noise-android).
 - Pluggable crypto adapter registry and factory pattern.
 - X448 cipher suite support (may return in a future minor release).
-- Shared test-vector fixtures directory (`test-vectors/`) with JSON format and official vector conversion tooling removed; replaced with new cross-platform JSON vectors in [Unreleased].
+- Shared test-vector fixtures directory (`test-vectors/`) with JSON format and official vector conversion tooling removed; replaced with new cross-platform JSON vectors.
 - Benchmark infrastructure and documentation.
 - v1 release automation scripts (`scripts/` directory — 11 validation/conversion scripts).
 - `docs/` directory (7 technical documents).
@@ -85,6 +87,13 @@ Complete rewrite of both iOS and Android implementations with a simplified, zero
 - Root-level `Package.swift`, `Package.resolved`, `noise-spec.lock`, `AGENTS.md`.
 - `noise-spec-watch.yml` workflow.
 - Multi-module Gradle subprojects (noise-core, noise-crypto, noise-testing, noise-android).
+
+### Performance
+
+- **iOS handshake ~22% faster**: cached DH public key computation, pre-allocated HKDF counter constants, optimized BLAKE2 HMAC ipad/opad loop, pre-sized handshake output buffer.
+- **Android AES-GCM transport 2–3× faster**: `ThreadLocal` caching of all JCA provider instances (`Cipher`, `MessageDigest`, `Mac`, `KeyPairGenerator`, `KeyFactory`, `KeyAgreement`) eliminates ~35 `getInstance()` provider lookups per handshake.
+- **Android handshake 6–10% faster**: JCA provider caching removes per-call overhead from DH, hash, and HMAC operations.
+- **Both platforms**: HKDF uses `System.arraycopy` / pre-allocated constants instead of allocating counter bytes on every call.
 
 ## [1.0.0] — 2026-03-08
 
