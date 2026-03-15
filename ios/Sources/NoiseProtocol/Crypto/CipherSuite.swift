@@ -1,5 +1,6 @@
 import Foundation
 import BlakeHash
+import CBLAKE2
 
 /// Bundles all cryptographic operations for a Noise cipher suite.
 public struct CipherSuite: Sendable {
@@ -23,8 +24,14 @@ public struct CipherSuite: Sendable {
     public let hash: @Sendable (Data) -> Data
     public let hmacHash: @Sendable (Data, Data) -> Data
 
-    /// HKDF derived from hmacHash. Built-in, not configurable.
+    // Optional native HKDF override (avoids intermediate Data allocations)
+    internal let hkdfOverride: (@Sendable (Data, Data, Int) -> [Data])?
+
+    /// HKDF derived from hmacHash, or native C implementation when available.
     public func hkdf(chainingKey: Data, inputKeyMaterial: Data, numOutputs: Int) -> [Data] {
+        if let native = hkdfOverride {
+            return native(chainingKey, inputKeyMaterial, numOutputs)
+        }
         let tempKey = hmacHash(chainingKey, inputKeyMaterial)
         let output1 = hmacHash(tempKey, hkdfCounter01)
         let output2 = hmacHash(tempKey, output1 + hkdfCounter02)
@@ -44,26 +51,6 @@ public struct CipherSuite: Sendable {
 private let hkdfCounter01 = Data([0x01])
 private let hkdfCounter02 = Data([0x02])
 private let hkdfCounter03 = Data([0x03])
-
-// MARK: - Generic HMAC for BLAKE2 (RFC 2104)
-
-private func hmac(
-    hash: @escaping @Sendable (Data) -> Data,
-    blocklen: Int,
-    key: Data,
-    data: Data
-) -> Data {
-    var k = key
-    if k.count > blocklen { k = hash(k) }
-    if k.count < blocklen { k += Data(repeating: 0, count: blocklen - k.count) }
-    var ipad = Data(count: blocklen)
-    var opad = Data(count: blocklen)
-    for i in 0..<blocklen {
-        ipad[i] = k[i] ^ 0x36
-        opad[i] = k[i] ^ 0x5c
-    }
-    return hash(opad + hash(ipad + data))
-}
 
 // MARK: - DH helpers (shared across all suites)
 
@@ -97,13 +84,121 @@ private let _sha256_hmac: @Sendable (Data, Data) -> Data = { NoiseHash.hmacHash(
 private let _sha512_hash: @Sendable (Data) -> Data = { NoiseHashSHA512.hash($0) }
 private let _sha512_hmac: @Sendable (Data, Data) -> Data = { NoiseHashSHA512.hmacHash(key: $0, data: $1) }
 
-private let _blake2s_hash: @Sendable (Data) -> Data = { BLAKE2s.hash($0) }
-private let _blake2s_hmac: @Sendable (Data, Data) -> Data = { key, data in
-    hmac(hash: { BLAKE2s.hash($0) }, blocklen: 64, key: key, data: data)
+private let _blake2s_hash: @Sendable (Data) -> Data = { input in
+    var output = Data(count: 32)
+    _ = input.withUnsafeBytes { inPtr in
+        output.withUnsafeMutableBytes { outPtr in
+            cblake2s(outPtr.baseAddress!, 32,
+                     inPtr.baseAddress, inPtr.count)
+        }
+    }
+    return output
 }
-private let _blake2b_hash: @Sendable (Data) -> Data = { BLAKE2b.hash($0) }
+private let _blake2s_hmac: @Sendable (Data, Data) -> Data = { key, data in
+    var output = Data(count: 32)
+    _ = key.withUnsafeBytes { keyPtr in
+        data.withUnsafeBytes { dataPtr in
+            output.withUnsafeMutableBytes { outPtr in
+                cblake2s_hmac(outPtr.baseAddress!,
+                              keyPtr.baseAddress, keyPtr.count,
+                              dataPtr.baseAddress, dataPtr.count)
+            }
+        }
+    }
+    return output
+}
+private let _blake2b_hash: @Sendable (Data) -> Data = { input in
+    var output = Data(count: 64)
+    _ = input.withUnsafeBytes { inPtr in
+        output.withUnsafeMutableBytes { outPtr in
+            cblake2b(outPtr.baseAddress!, 64,
+                     inPtr.baseAddress, inPtr.count)
+        }
+    }
+    return output
+}
 private let _blake2b_hmac: @Sendable (Data, Data) -> Data = { key, data in
-    hmac(hash: { BLAKE2b.hash($0) }, blocklen: 128, key: key, data: data)
+    var output = Data(count: 64)
+    _ = key.withUnsafeBytes { keyPtr in
+        data.withUnsafeBytes { dataPtr in
+            output.withUnsafeMutableBytes { outPtr in
+                cblake2b_hmac(outPtr.baseAddress!,
+                              keyPtr.baseAddress, keyPtr.count,
+                              dataPtr.baseAddress, dataPtr.count)
+            }
+        }
+    }
+    return output
+}
+
+// MARK: - Native HKDF overrides for BLAKE2 (avoids intermediate Data allocations)
+
+private let _blake2s_hkdf: @Sendable (Data, Data, Int) -> [Data] = { ck, ikm, numOutputs in
+    var out1 = Data(count: 32)
+    var out2 = Data(count: 32)
+    if numOutputs == 2 {
+        _ = ck.withUnsafeBytes { ckPtr in
+            ikm.withUnsafeBytes { ikmPtr in
+                out1.withUnsafeMutableBytes { o1 in
+                    out2.withUnsafeMutableBytes { o2 in
+                        cblake2s_hkdf2(ckPtr.baseAddress, ckPtr.count,
+                                       ikmPtr.baseAddress, ikmPtr.count,
+                                       o1.baseAddress!, o2.baseAddress!)
+                    }
+                }
+            }
+        }
+        return [out1, out2]
+    }
+    var out3 = Data(count: 32)
+    _ = ck.withUnsafeBytes { ckPtr in
+        ikm.withUnsafeBytes { ikmPtr in
+            out1.withUnsafeMutableBytes { o1 in
+                out2.withUnsafeMutableBytes { o2 in
+                    out3.withUnsafeMutableBytes { o3 in
+                        cblake2s_hkdf3(ckPtr.baseAddress, ckPtr.count,
+                                       ikmPtr.baseAddress, ikmPtr.count,
+                                       o1.baseAddress!, o2.baseAddress!, o3.baseAddress!)
+                    }
+                }
+            }
+        }
+    }
+    return [out1, out2, out3]
+}
+
+private let _blake2b_hkdf: @Sendable (Data, Data, Int) -> [Data] = { ck, ikm, numOutputs in
+    var out1 = Data(count: 64)
+    var out2 = Data(count: 64)
+    if numOutputs == 2 {
+        _ = ck.withUnsafeBytes { ckPtr in
+            ikm.withUnsafeBytes { ikmPtr in
+                out1.withUnsafeMutableBytes { o1 in
+                    out2.withUnsafeMutableBytes { o2 in
+                        cblake2b_hkdf2(ckPtr.baseAddress, ckPtr.count,
+                                       ikmPtr.baseAddress, ikmPtr.count,
+                                       o1.baseAddress!, o2.baseAddress!)
+                    }
+                }
+            }
+        }
+        return [out1, out2]
+    }
+    var out3 = Data(count: 64)
+    _ = ck.withUnsafeBytes { ckPtr in
+        ikm.withUnsafeBytes { ikmPtr in
+            out1.withUnsafeMutableBytes { o1 in
+                out2.withUnsafeMutableBytes { o2 in
+                    out3.withUnsafeMutableBytes { o3 in
+                        cblake2b_hkdf3(ckPtr.baseAddress, ckPtr.count,
+                                       ikmPtr.baseAddress, ikmPtr.count,
+                                       o1.baseAddress!, o2.baseAddress!, o3.baseAddress!)
+                    }
+                }
+            }
+        }
+    }
+    return [out1, out2, out3]
 }
 
 // MARK: - 8 Cipher Suite constants
@@ -115,7 +210,8 @@ extension CipherSuite {
         dhlen: 32, hashlen: 32, blocklen: 64,
         generateKeyPair: _25519_generate, dh: _25519_dh, keyPairFromPrivate: _25519_fromPrivate,
         encrypt: _chacha_encrypt, decrypt: _chacha_decrypt,
-        hash: _sha256_hash, hmacHash: _sha256_hmac
+        hash: _sha256_hash, hmacHash: _sha256_hmac,
+        hkdfOverride: nil
     )
 
     /// Noise_XX_25519_ChaChaPoly_SHA512
@@ -124,7 +220,8 @@ extension CipherSuite {
         dhlen: 32, hashlen: 64, blocklen: 128,
         generateKeyPair: _25519_generate, dh: _25519_dh, keyPairFromPrivate: _25519_fromPrivate,
         encrypt: _chacha_encrypt, decrypt: _chacha_decrypt,
-        hash: _sha512_hash, hmacHash: _sha512_hmac
+        hash: _sha512_hash, hmacHash: _sha512_hmac,
+        hkdfOverride: nil
     )
 
     /// Noise_XX_25519_ChaChaPoly_BLAKE2s
@@ -133,7 +230,8 @@ extension CipherSuite {
         dhlen: 32, hashlen: 32, blocklen: 64,
         generateKeyPair: _25519_generate, dh: _25519_dh, keyPairFromPrivate: _25519_fromPrivate,
         encrypt: _chacha_encrypt, decrypt: _chacha_decrypt,
-        hash: _blake2s_hash, hmacHash: _blake2s_hmac
+        hash: _blake2s_hash, hmacHash: _blake2s_hmac,
+        hkdfOverride: _blake2s_hkdf
     )
 
     /// Noise_XX_25519_ChaChaPoly_BLAKE2b
@@ -142,7 +240,8 @@ extension CipherSuite {
         dhlen: 32, hashlen: 64, blocklen: 128,
         generateKeyPair: _25519_generate, dh: _25519_dh, keyPairFromPrivate: _25519_fromPrivate,
         encrypt: _chacha_encrypt, decrypt: _chacha_decrypt,
-        hash: _blake2b_hash, hmacHash: _blake2b_hmac
+        hash: _blake2b_hash, hmacHash: _blake2b_hmac,
+        hkdfOverride: _blake2b_hkdf
     )
 
     /// Noise_XX_25519_AESGCM_SHA256
@@ -151,7 +250,8 @@ extension CipherSuite {
         dhlen: 32, hashlen: 32, blocklen: 64,
         generateKeyPair: _25519_generate, dh: _25519_dh, keyPairFromPrivate: _25519_fromPrivate,
         encrypt: _aesgcm_encrypt, decrypt: _aesgcm_decrypt,
-        hash: _sha256_hash, hmacHash: _sha256_hmac
+        hash: _sha256_hash, hmacHash: _sha256_hmac,
+        hkdfOverride: nil
     )
 
     /// Noise_XX_25519_AESGCM_SHA512
@@ -160,7 +260,8 @@ extension CipherSuite {
         dhlen: 32, hashlen: 64, blocklen: 128,
         generateKeyPair: _25519_generate, dh: _25519_dh, keyPairFromPrivate: _25519_fromPrivate,
         encrypt: _aesgcm_encrypt, decrypt: _aesgcm_decrypt,
-        hash: _sha512_hash, hmacHash: _sha512_hmac
+        hash: _sha512_hash, hmacHash: _sha512_hmac,
+        hkdfOverride: nil
     )
 
     /// Noise_XX_25519_AESGCM_BLAKE2s
@@ -169,7 +270,8 @@ extension CipherSuite {
         dhlen: 32, hashlen: 32, blocklen: 64,
         generateKeyPair: _25519_generate, dh: _25519_dh, keyPairFromPrivate: _25519_fromPrivate,
         encrypt: _aesgcm_encrypt, decrypt: _aesgcm_decrypt,
-        hash: _blake2s_hash, hmacHash: _blake2s_hmac
+        hash: _blake2s_hash, hmacHash: _blake2s_hmac,
+        hkdfOverride: _blake2s_hkdf
     )
 
     /// Noise_XX_25519_AESGCM_BLAKE2b
@@ -178,6 +280,7 @@ extension CipherSuite {
         dhlen: 32, hashlen: 64, blocklen: 128,
         generateKeyPair: _25519_generate, dh: _25519_dh, keyPairFromPrivate: _25519_fromPrivate,
         encrypt: _aesgcm_encrypt, decrypt: _aesgcm_decrypt,
-        hash: _blake2b_hash, hmacHash: _blake2b_hmac
+        hash: _blake2b_hash, hmacHash: _blake2b_hmac,
+        hkdfOverride: _blake2b_hkdf
     )
 }

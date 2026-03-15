@@ -18,8 +18,17 @@ let package = Package(
     ],
     targets: [
         .target(
+            name: "CBLAKE2",
+            path: "Sources/CBLAKE2",
+            publicHeadersPath: "include",
+            cSettings: [.unsafeFlags(["-O3"])]
+        ),
+        .target(
             name: "NoiseProtocol",
-            dependencies: [.product(name: "BlakeHash", package: "blake-hash")],
+            dependencies: [
+                .product(name: "BlakeHash", package: "blake-hash"),
+                "CBLAKE2"
+            ],
             path: "Sources/NoiseProtocol"
         ),
         .testTarget(

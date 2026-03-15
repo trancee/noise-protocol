@@ -73,32 +73,40 @@ class CipherSuite(
         private val sha512HmacHash: (ByteArray, ByteArray) -> ByteArray =
             { key, data -> NoiseHashSHA512.hmacHash(key, data) }
 
-        // BLAKE2s lambdas (HMAC via RFC 2104, NOT BLAKE2's built-in keying)
+        // BLAKE2s lambdas — streaming HMAC avoids ByteArray concatenation
         private val blake2sHash: (ByteArray) -> ByteArray = { BLAKE2s.hash(it) }
         private val blake2sHmacHash: (ByteArray, ByteArray) -> ByteArray =
-            { key, data -> hmac(BLAKE2s::hash, 64, key, data) }
+            { key, data -> hmacBlake2s(key, data) }
 
-        // BLAKE2b lambdas
+        // BLAKE2b lambdas — streaming HMAC avoids ByteArray concatenation
         private val blake2bHash: (ByteArray) -> ByteArray = { BLAKE2b.hash(it) }
         private val blake2bHmacHash: (ByteArray, ByteArray) -> ByteArray =
-            { key, data -> hmac(BLAKE2b::hash, 128, key, data) }
+            { key, data -> hmacBlake2b(key, data) }
 
-        /** Standard HMAC construction (RFC 2104) for BLAKE2 hashes. */
-        private fun hmac(
-            hashFn: (ByteArray) -> ByteArray,
-            blocklen: Int,
-            key: ByteArray,
-            data: ByteArray
-        ): ByteArray {
-            var k = if (key.size > blocklen) hashFn(key) else key
-            if (k.size < blocklen) k = k + ByteArray(blocklen - k.size)
-            val ipad = ByteArray(blocklen)
-            val opad = ByteArray(blocklen)
-            for (i in 0 until blocklen) {
-                ipad[i] = (k[i].toInt() xor 0x36).toByte()
-                opad[i] = (k[i].toInt() xor 0x5c).toByte()
-            }
-            return hashFn(opad + hashFn(ipad + data))
+        /** Streaming HMAC-BLAKE2s (RFC 2104) — avoids ipad+data concatenation. */
+        private fun hmacBlake2s(key: ByteArray, data: ByteArray): ByteArray {
+            var k = if (key.size > 64) BLAKE2s.hash(key) else key
+            if (k.size < 64) k = k.copyOf(64)
+            val pad = ByteArray(64)
+            // Inner: BLAKE2s(ipad || data)
+            for (i in 0 until 64) pad[i] = (k[i].toInt() xor 0x36).toByte()
+            val innerHash = BLAKE2s.Hasher().update(pad).update(data).finalize()
+            // Outer: BLAKE2s(opad || innerHash)
+            for (i in 0 until 64) pad[i] = (k[i].toInt() xor 0x5c).toByte()
+            return BLAKE2s.Hasher().update(pad).update(innerHash).finalize()
+        }
+
+        /** Streaming HMAC-BLAKE2b (RFC 2104) — avoids ipad+data concatenation. */
+        private fun hmacBlake2b(key: ByteArray, data: ByteArray): ByteArray {
+            var k = if (key.size > 128) BLAKE2b.hash(key) else key
+            if (k.size < 128) k = k.copyOf(128)
+            val pad = ByteArray(128)
+            // Inner: BLAKE2b(ipad || data)
+            for (i in 0 until 128) pad[i] = (k[i].toInt() xor 0x36).toByte()
+            val innerHash = BLAKE2b.Hasher().update(pad).update(data).finalize()
+            // Outer: BLAKE2b(opad || innerHash)
+            for (i in 0 until 128) pad[i] = (k[i].toInt() xor 0x5c).toByte()
+            return BLAKE2b.Hasher().update(pad).update(innerHash).finalize()
         }
 
         // --- The 8 cipher suites ---
