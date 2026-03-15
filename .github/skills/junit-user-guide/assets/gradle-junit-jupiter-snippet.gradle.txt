@@ -1,9 +1,0 @@
-dependencies {
-    // Use a JUnit 5.x line on Java 8-11. Move to JUnit 6 only on Java 17+.
-    testImplementation platform('org.junit:junit-bom:5.10.2')
-    testImplementation 'org.junit.jupiter:junit-jupiter'
-}
-
-test {
-    useJUnitPlatform()
-}

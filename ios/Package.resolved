@@ -1,13 +1,13 @@
 {
-  "originHash" : "2b8918f05d4c7a1f1a9b0d4b9f460f63819e52ddb0191ddfea1eba51bfd8bb70",
+  "originHash" : "318fbf901a024ded2201224c4b908d2d8d30ceed316ade69337580abc30eeade",
   "pins" : [
     {
-      "identity" : "bigint",
+      "identity" : "blake-hash",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/attaswift/BigInt.git",
+      "location" : "https://github.com/trancee/blake-hash.git",
       "state" : {
-        "revision" : "e07e00fa1fd435143a2dcf8b7eec9a7710b2fdfe",
-        "version" : "5.7.0"
+        "revision" : "988771698e12a573fcb99882f276a435230d0735",
+        "version" : "1.1.0"
       }
     }
   ],
