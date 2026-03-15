@@ -35,56 +35,41 @@ class NoiseKeyPair private constructor(
     /** Perform X25519 Diffie-Hellman. Returns DHLEN (32) bytes. */
     fun dh(remotePublicKey: ByteArray): ByteArray {
         val remotePub = publicKeyFromBytes(remotePublicKey)
-        val agreement = KeyAgreement.getInstance("XDH")
+        val agreement = keyAgreementLocal.get()
         agreement.init(javaKeyPair.private)
         agreement.doPhase(remotePub, true)
         val secret = agreement.generateSecret()
-        // Pad or trim to DHLEN
         val result = ByteArray(DHLEN)
         System.arraycopy(secret, 0, result, 0, minOf(secret.size, DHLEN))
         return result
     }
 
     companion object {
+        private val keyPairGenLocal = ThreadLocal.withInitial {
+            KeyPairGenerator.getInstance("XDH").apply {
+                initialize(NamedParameterSpec.X25519)
+            }
+        }
+        private val keyFactoryLocal = ThreadLocal.withInitial {
+            KeyFactory.getInstance("XDH")
+        }
+        private val keyAgreementLocal = ThreadLocal.withInitial {
+            KeyAgreement.getInstance("XDH")
+        }
+
         /** Generate a random X25519 key pair. */
         fun generate(): NoiseKeyPair {
-            val kpg = KeyPairGenerator.getInstance("XDH")
-            kpg.initialize(NamedParameterSpec.X25519)
-            return NoiseKeyPair(kpg.generateKeyPair())
+            return NoiseKeyPair(keyPairGenLocal.get().generateKeyPair())
         }
 
         /** Create from a 32-byte private key (for deterministic testing). */
         fun fromPrivateKey(privateKeyData: ByteArray): NoiseKeyPair {
             require(privateKeyData.size == DHLEN) { "Private key must be $DHLEN bytes" }
-            val kf = KeyFactory.getInstance("XDH")
-            // X25519 private key scalar is little-endian
-            val spec = XECPrivateKeySpec(NamedParameterSpec.X25519, privateKeyData)
-            val privateKey = kf.generatePrivate(spec)
-            // Derive public key by doing a DH with the basepoint
-            // Instead, we generate a keypair from the spec and extract the public key
-            val kpg = KeyPairGenerator.getInstance("XDH")
-            kpg.initialize(NamedParameterSpec.X25519)
-            // Use KeyFactory to derive the public key from the private key
-            // The XECPrivateKeySpec doesn't directly give us the public key,
-            // so we do a key agreement with the basepoint
-            val tempKpg = KeyPairGenerator.getInstance("XDH")
-            tempKpg.initialize(NamedParameterSpec.X25519)
-            val tempKp = tempKpg.generateKeyPair()
-
-            // Alternative: compute DH(private, basepoint) to get public key
-            // For X25519, public_key = scalar_mult(private_key, basepoint)
-            // The JCA API doesn't expose this directly, so we'll use a workaround:
-            // Create a proper keypair by encoding/decoding
-
-            // Workaround: use the private key and derive the corresponding public key
-            // by leveraging the XDH key agreement with a known public key, or by using
-            // the internal mechanism
+            val kf = keyFactoryLocal.get()
             val privKey = kf.generatePrivate(
                 XECPrivateKeySpec(NamedParameterSpec.X25519, privateKeyData)
             ) as java.security.interfaces.XECPrivateKey
 
-            // Get the public key from the private key spec
-            // X25519: pubkey = clamp(privkey) * basepoint
             val pubBytes = computeX25519PublicKey(privateKeyData)
             val pubU = bytesToBigIntegerLE(pubBytes)
             val pubKeySpec = XECPublicKeySpec(NamedParameterSpec.X25519, pubU)
@@ -98,7 +83,7 @@ class NoiseKeyPair private constructor(
             require(bytes.size == DHLEN) { "Public key must be $DHLEN bytes" }
             val u = bytesToBigIntegerLE(bytes)
             val spec = XECPublicKeySpec(NamedParameterSpec.X25519, u)
-            return KeyFactory.getInstance("XDH").generatePublic(spec)
+            return keyFactoryLocal.get().generatePublic(spec)
         }
 
         /** Convert little-endian byte array to unsigned BigInteger. */
@@ -114,20 +99,17 @@ class NoiseKeyPair private constructor(
 
         /** Compute X25519 public key from private key bytes using JCA. */
         private fun computeX25519PublicKey(privateKeyData: ByteArray): ByteArray {
-            // Use a round-trip through KeyAgreement with a known basepoint
-            // Actually, the simplest approach: create a temporary keypair,
-            // then use the key factory
-            val kf = KeyFactory.getInstance("XDH")
+            val kf = keyFactoryLocal.get()
             val privKeySpec = XECPrivateKeySpec(NamedParameterSpec.X25519, privateKeyData)
             val privKey = kf.generatePrivate(privKeySpec)
 
-            // The X25519 basepoint is u=9
+            // X25519 basepoint is u=9
             val basepoint = ByteArray(DHLEN).also { it[0] = 9 }
             val basepointU = bytesToBigIntegerLE(basepoint)
             val basepointPubSpec = XECPublicKeySpec(NamedParameterSpec.X25519, basepointU)
             val basepointPub = kf.generatePublic(basepointPubSpec)
 
-            val agreement = KeyAgreement.getInstance("XDH")
+            val agreement = keyAgreementLocal.get()
             agreement.init(privKey)
             agreement.doPhase(basepointPub, true)
             val pubKey = agreement.generateSecret()

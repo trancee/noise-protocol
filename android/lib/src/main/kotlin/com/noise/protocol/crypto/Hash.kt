@@ -10,11 +10,17 @@ object NoiseHash {
     const val HASHLEN = 32
     const val BLOCKLEN = 64
 
-    fun hash(data: ByteArray): ByteArray =
-        java.security.MessageDigest.getInstance("SHA-256").digest(data)
+    private val digestLocal = ThreadLocal.withInitial {
+        java.security.MessageDigest.getInstance("SHA-256")
+    }
+    private val macLocal = ThreadLocal.withInitial {
+        Mac.getInstance("HmacSHA256")
+    }
+
+    fun hash(data: ByteArray): ByteArray = digestLocal.get().digest(data)
 
     fun hmacHash(key: ByteArray, data: ByteArray): ByteArray {
-        val mac = Mac.getInstance("HmacSHA256")
+        val mac = macLocal.get()
         mac.init(SecretKeySpec(key, "HmacSHA256"))
         return mac.doFinal(data)
     }
@@ -52,11 +58,17 @@ object NoiseHashSHA512 {
     const val HASHLEN = 64
     const val BLOCKLEN = 128
 
-    fun hash(data: ByteArray): ByteArray =
-        java.security.MessageDigest.getInstance("SHA-512").digest(data)
+    private val digestLocal = ThreadLocal.withInitial {
+        java.security.MessageDigest.getInstance("SHA-512")
+    }
+    private val macLocal = ThreadLocal.withInitial {
+        Mac.getInstance("HmacSHA512")
+    }
+
+    fun hash(data: ByteArray): ByteArray = digestLocal.get().digest(data)
 
     fun hmacHash(key: ByteArray, data: ByteArray): ByteArray {
-        val mac = Mac.getInstance("HmacSHA512")
+        val mac = macLocal.get()
         mac.init(SecretKeySpec(key, "HmacSHA512"))
         return mac.doFinal(data)
     }

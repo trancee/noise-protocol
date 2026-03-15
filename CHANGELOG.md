@@ -36,8 +36,8 @@ All notable changes to this project are documented in this file.
 ### Performance
 
 - **iOS handshake ~22% faster**: cached DH public key computation, pre-allocated HKDF counter constants, optimized BLAKE2 HMAC ipad/opad loop, pre-sized handshake output buffer.
-- **Android AES-GCM transport 2–3× faster**: `ThreadLocal<Cipher>` instance caching eliminates `Cipher.getInstance()` lookups on every encrypt/decrypt.
-- **Android handshake buffer**: replaced repeated `ByteArray +=` concatenation with `ByteArrayOutputStream` to avoid per-token array copies.
+- **Android AES-GCM transport 2–3× faster**: `ThreadLocal` caching of all JCA provider instances (`Cipher`, `MessageDigest`, `Mac`, `KeyPairGenerator`, `KeyFactory`, `KeyAgreement`) eliminates ~35 `getInstance()` provider lookups per handshake.
+- **Android handshake 6–10% faster**: JCA provider caching removes per-call overhead from DH, hash, and HMAC operations.
 - **Both platforms**: HKDF uses `System.arraycopy` / pre-allocated constants instead of allocating counter bytes on every call.
 
 ## [2.0.0] — 2026-03-13

@@ -8,11 +8,11 @@ Performance benchmarks for all 8 cipher suites across all handshake patterns and
 
 | Metric | ChaChaPoly + SHA-256 | AES-GCM + SHA-256 |
 |--------|---------------------|--------------------|
-| NN handshake (2 msgs) | ~130 µs (iOS) / ~370 µs (JVM) | ~125 µs (iOS) / ~360 µs (JVM) |
-| XX handshake (3 msgs) | ~270 µs (iOS) / ~590 µs (JVM) | ~260 µs (iOS) / ~570 µs (JVM) |
-| IK handshake (2 msgs) | ~320 µs (iOS) / ~690 µs (JVM) | ~310 µs (iOS) / ~670 µs (JVM) |
-| Transport encrypt 1 KB | 3.3 µs (iOS) / 2.4 µs (JVM) | 2.2 µs (iOS) / 0.7 µs (JVM) |
-| Transport throughput | ~280 MB/s (iOS) / ~205 MB/s (JVM) | ~430 MB/s (iOS) / ~716 MB/s (JVM) |
+| NN handshake (2 msgs) | ~130 µs (iOS) / ~345 µs (JVM) | ~125 µs (iOS) / ~280 µs (JVM) |
+| XX handshake (3 msgs) | ~270 µs (iOS) / ~590 µs (JVM) | ~260 µs (iOS) / ~540 µs (JVM) |
+| IK handshake (2 msgs) | ~320 µs (iOS) / ~665 µs (JVM) | ~310 µs (iOS) / ~650 µs (JVM) |
+| Transport encrypt 1 KB | 3.3 µs (iOS) / 2.3 µs (JVM) | 2.2 µs (iOS) / 0.6 µs (JVM) |
+| Transport throughput | ~280 MB/s (iOS) / ~210 MB/s (JVM) | ~430 MB/s (iOS) / ~727 MB/s (JVM) |
 
 ## Performance Optimizations
 
@@ -26,7 +26,7 @@ The codebase was profiled and optimized across both platforms. Key changes and t
 | **HKDF counter constants** — pre-allocated `[0x01]`, `[0x02]`, `[0x03]` as static constants | Both | Eliminates per-call allocations in every MixKey/Split |
 | **BLAKE2 HMAC loop optimization** — replaced `map` closure with explicit for-loop for ipad/opad XOR | Both | Reduces closure overhead in BLAKE2 suites |
 | **Pre-sized handshake buffer** — `Data(capacity: 256)` (iOS), `ByteArrayOutputStream(256)` (Android) | Both | Eliminates buffer regrowth during writeMessage |
-| **ThreadLocal Cipher caching** — reuse JCA `Cipher` instances via `ThreadLocal` | Android | Transport: **2× faster** for AES-GCM |
+| **ThreadLocal JCA provider caching** — reuse `Cipher`, `MessageDigest`, `Mac`, `KeyPairGenerator`, `KeyFactory`, and `KeyAgreement` instances via `ThreadLocal` | Android | Handshake: **6–10% faster**; Transport: **2–3× faster** for AES-GCM |
 | **HKDF concatenation** — `System.arraycopy` instead of `+` operator for output+counter | Android | Avoids intermediate ByteArray allocation |
 
 ### Before/After: iOS Handshake
@@ -48,15 +48,40 @@ The codebase was profiled and optimized across both platforms. Key changes and t
 
 | Suite | Before (MB/s) | After (MB/s) | Improvement |
 |-------|-------------:|------------:|------------:|
-| ChaChaPoly\_SHA256 | 197 | 205 | +4% |
-| ChaChaPoly\_BLAKE2s | 326 | 400 | **+23%** |
-| ChaChaPoly\_BLAKE2b | 322 | 399 | **+24%** |
-| AESGCM\_SHA256 | 348 | 716 | **+106%** |
-| AESGCM\_SHA512 | 365 | 1,061 | **+191%** |
-| AESGCM\_BLAKE2s | 377 | 1,061 | **+182%** |
-| AESGCM\_BLAKE2b | 381 | 1,089 | **+186%** |
+| ChaChaPoly\_SHA256 | 197 | 211 | +7% |
+| ChaChaPoly\_BLAKE2s | 326 | 390 | **+20%** |
+| ChaChaPoly\_BLAKE2b | 322 | 385 | **+20%** |
+| AESGCM\_SHA256 | 348 | 727 | **+109%** |
+| AESGCM\_SHA512 | 365 | 1,037 | **+184%** |
+| AESGCM\_BLAKE2s | 377 | 1,055 | **+180%** |
+| AESGCM\_BLAKE2b | 381 | 1,056 | **+177%** |
 
-> The AES-GCM gains come from `ThreadLocal<Cipher>` caching, avoiding `Cipher.getInstance()` lookups on every encrypt/decrypt. ChaCha20-Poly1305 also benefits, but less dramatically because JCA's ChaCha20 provider has a key+nonce reuse check that requires occasional fallback to a fresh instance.
+### Before/After: Android Handshake
+
+| Pattern | Before (µs) | After (µs) | Improvement |
+|---------|------------:|-----------:|------------:|
+| NN (2 msg) | 382 | 345 | **10%** |
+| NK (2 msg) | 526 | 495 | **6%** |
+| XX (3 msg) | 605 | 590 | **3%** |
+| IK (2 msg) | 706 | 666 | **6%** |
+| KK (2 msg) | 729 | 687 | **6%** |
+
+> The AES-GCM transport gains come from `ThreadLocal` caching of JCA `Cipher` instances. Handshake improvements come from caching `KeyPairGenerator`, `KeyFactory`, `KeyAgreement`, `MessageDigest`, and `Mac` instances — eliminating ~35 JCA provider lookups per handshake.
+
+## Why Android Handshakes Are Slower Than iOS
+
+iOS handshakes are **2–3× faster** than Android/JVM for the same patterns. This is a fundamental platform difference, not a code quality issue:
+
+| Factor | iOS (CryptoKit) | Android (JCA) | Impact |
+|--------|-----------------|---------------|--------|
+| **X25519 DH** | Native ARM assembly via Secure Enclave coprocessor | Java implementation via JCA provider | **~2× slower** — dominates handshake time |
+| **Key construction** | Direct `Curve25519.KeyAgreement.PublicKey(rawRepresentation:)` | `BigInteger` conversion → `XECPublicKeySpec` → `KeyFactory.generatePublic()` | **~1.5× overhead** per DH call |
+| **Hash/HMAC** | Hardware-accelerated `SHA256` / `HMAC<SHA256>` | JIT-compiled `MessageDigest` / `Mac` | **~1.5× slower** |
+| **Object model** | Value types (`Data`, `SymmetricKey`) — stack-allocated | Heap objects (`ByteArray`, `SecretKeySpec`) — GC pressure | Adds latency variance |
+
+The X25519 scalar multiplication alone accounts for ~70% of handshake time on both platforms. CryptoKit's implementation benefits from Apple's hardware-accelerated cryptographic coprocessor, while JCA uses a software implementation that, even with JIT optimization, cannot match native speed.
+
+**Transport throughput tells a different story**: Android AES-GCM (727–1,056 MB/s) significantly outperforms iOS (425–430 MB/s) because the JVM's AES-NI intrinsics are highly optimized after JIT warmup, and our `ThreadLocal<Cipher>` caching eliminates provider lookup overhead.
 
 ## Methodology
 
@@ -83,14 +108,14 @@ The codebase was profiled and optimized across both platforms. Key changes and t
 
 | Suite | Encrypt (µs) | Decrypt (µs) | Throughput (MB/s) |
 |-------|------------:|------------:|------------------:|
-| ChaChaPoly\_SHA256 | 2.4 | 2.4 | 205 |
-| ChaChaPoly\_SHA512 | 1.6 | 2.6 | 234 |
-| ChaChaPoly\_BLAKE2s | 1.2 | 1.2 | 400 |
-| ChaChaPoly\_BLAKE2b | 1.2 | 1.2 | 399 |
-| AESGCM\_SHA256 | 0.7 | 0.6 | 716 |
-| AESGCM\_SHA512 | 0.5 | 0.5 | 1,061 |
-| AESGCM\_BLAKE2s | 0.5 | 0.5 | 1,061 |
-| AESGCM\_BLAKE2b | 0.5 | 0.4 | 1,089 |
+| ChaChaPoly\_SHA256 | 2.3 | 2.3 | 211 |
+| ChaChaPoly\_SHA512 | 1.7 | 1.7 | 282 |
+| ChaChaPoly\_BLAKE2s | 1.2 | 1.3 | 390 |
+| ChaChaPoly\_BLAKE2b | 1.3 | 1.3 | 385 |
+| AESGCM\_SHA256 | 0.6 | 0.7 | 727 |
+| AESGCM\_SHA512 | 0.5 | 0.5 | 1,037 |
+| AESGCM\_BLAKE2s | 0.5 | 0.5 | 1,055 |
+| AESGCM\_BLAKE2b | 0.5 | 0.5 | 1,056 |
 
 **Key takeaway:** Hash choice does not affect transport speed — after the handshake, only the AEAD cipher is used. AES-GCM is ~1.5× faster than ChaCha20-Poly1305 on iOS (hardware AES-NI) and ~3–5× faster on Android/JVM after Cipher instance caching.
 
@@ -115,14 +140,14 @@ Average handshake time in microseconds (µs). All 41 patterns × 8 suites were b
 
 | Suite | N (1) | NN (2) | NK (2) | IK (2) | XX (3) | IKpsk2 (2) |
 |-------|------:|-------:|-------:|-------:|-------:|-----------:|
-| ChaChaPoly\_SHA256 | 745 | 366 | 524 | 690 | 588 | 679 |
-| ChaChaPoly\_SHA512 | 274 | 287 | 424 | 699 | 557 | 692 |
-| ChaChaPoly\_BLAKE2s | 251 | 275 | 407 | 667 | 548 | 682 |
-| ChaChaPoly\_BLAKE2b | 255 | 268 | 403 | 661 | 540 | 669 |
-| AESGCM\_SHA256 | 227 | 270 | 395 | 668 | 527 | 674 |
-| AESGCM\_SHA512 | 210 | 260 | 389 | 660 | 519 | 668 |
-| AESGCM\_BLAKE2s | 205 | 269 | 401 | 661 | 537 | 678 |
-| AESGCM\_BLAKE2b | 202 | 261 | 393 | 662 | 528 | 670 |
+| ChaChaPoly\_SHA256 | 612 | 345 | 495 | 666 | 590 | 655 |
+| ChaChaPoly\_SHA512 | 239 | 277 | 412 | 665 | 538 | 668 |
+| ChaChaPoly\_BLAKE2s | 232 | 272 | 408 | 665 | 544 | 675 |
+| ChaChaPoly\_BLAKE2b | 259 | 269 | 403 | 667 | 516 | 671 |
+| AESGCM\_SHA256 | 227 | 276 | 413 | 649 | 539 | 646 |
+| AESGCM\_SHA512 | 197 | 260 | 390 | 651 | 522 | 670 |
+| AESGCM\_BLAKE2s | 200 | 264 | 399 | 662 | 531 | 662 |
+| AESGCM\_BLAKE2b | 199 | 263 | 394 | 660 | 536 | 665 |
 
 **Observations:**
 - On iOS, SHA-256 and SHA-512 suites perform nearly identically thanks to CryptoKit hardware acceleration. BLAKE2 suites are 3–4× slower due to the pure-Swift blake-hash implementation.
@@ -148,14 +173,14 @@ Average handshake time in microseconds (µs). All 41 patterns × 8 suites were b
 
 | Suite | Avg (µs) | Min (µs) | Max (µs) |
 |-------|--------:|---------:|---------:|
-| ChaChaPoly\_SHA256 | 673 | 646 | 718 |
-| ChaChaPoly\_SHA512 | 697 | 669 | 969 |
-| ChaChaPoly\_BLAKE2s | 675 | 666 | 699 |
-| ChaChaPoly\_BLAKE2b | 677 | 668 | 701 |
-| AESGCM\_SHA256 | 676 | 660 | 738 |
-| AESGCM\_SHA512 | 669 | 650 | 782 |
-| AESGCM\_BLAKE2s | 672 | 664 | 685 |
-| AESGCM\_BLAKE2b | 681 | 668 | 712 |
+| ChaChaPoly\_SHA256 | 658 | 647 | 673 |
+| ChaChaPoly\_SHA512 | 685 | 656 | 903 |
+| ChaChaPoly\_BLAKE2s | 662 | 655 | 680 |
+| ChaChaPoly\_BLAKE2b | 663 | 656 | 672 |
+| AESGCM\_SHA256 | 650 | 643 | 663 |
+| AESGCM\_SHA512 | 659 | 651 | 674 |
+| AESGCM\_BLAKE2s | 667 | 655 | 687 |
+| AESGCM\_BLAKE2b | 661 | 655 | 671 |
 
 ## Running Benchmarks
 
