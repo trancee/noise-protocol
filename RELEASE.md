@@ -7,7 +7,7 @@ This runbook documents the release flow implemented in `.github/workflows/releas
 ### Tooling (for local preflight)
 
 - Java 21
-- Gradle 9.4.0
+- Gradle 8.7
 - Xcode 16.4
 - Swift 6.1
 

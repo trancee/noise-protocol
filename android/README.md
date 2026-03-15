@@ -113,11 +113,11 @@ responder.readMessage(msg1)
 val (msg2, _) = responder.writeMessage()
 initiator.readMessage(msg2)
 
-val (msg3, respTransport) = initiator.writeMessage()
-val (_, initTransport) = responder.readMessage(msg3)
+val (msg3, initTransport) = initiator.writeMessage()
+val (_, respTransport) = responder.readMessage(msg3)
 
 // Both sides now have authenticated transport + remote static keys
-val remoteKey = initTransport!!.remoteStaticKey
+val remoteKey = respTransport!!.remoteStaticKey
 ```
 
 ### XX with AES-GCM + SHA-512
@@ -316,10 +316,14 @@ All errors extend the sealed `NoiseException` class:
 |-----------|-------------|
 | `DecryptionFailed` | AEAD authentication tag mismatch |
 | `HandshakeAlreadyComplete` | Attempted handshake operation after completion |
+| `HandshakeNotComplete` | Accessed transport state before handshake finished |
 | `NotYourTurn` | Called write on a read turn or vice versa |
 | `InvalidMessage` | Handshake message truncated or malformed |
+| `InvalidPayloadSize` | Payload exceeds maximum size (65,535 bytes) |
+| `InvalidPublicKey` | Public key validation failed |
 | `UnknownPattern` | Unknown pattern name in `HandshakePattern.named()` |
 | `MissingKey` | Required key not provided |
+| `NoKey` | No cipher key set (e.g., rekey before keyed) |
 | `NonceExhausted` | Nonce counter overflow (2^64 messages) |
 
 ## Testing

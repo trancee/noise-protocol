@@ -56,7 +56,7 @@ Complete rewrite of both iOS and Android implementations with a simplified, zero
 - Nonce exhaustion detection and 65,535-byte message limit enforcement.
 - Proper nonce preservation on decryption failure per spec.
 - Rekey support (`ENCRYPT(k, maxnonce, empty, zeros_32)`).
-- 36 iOS tests (9 test vector + 27 unit) and 87 Android tests (57 test vector + 30 unit).
+- 36 iOS tests (9 test vector + 27 unit) and 73 Android tests (42 parameterized test vector + 1 XXfallback + 30 unit).
 - Cross-platform validation: identical output for same inputs on both platforms.
 - Test vectors validated against cacophony and noise-c canonical outputs.
 - Platform-specific README documentation with API reference and usage examples.

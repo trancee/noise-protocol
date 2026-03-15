@@ -68,23 +68,26 @@ import NoiseProtocol
 let initiator = try HandshakeState(pattern: .XX, initiator: true, s: NoiseKeyPair())
 let responder = try HandshakeState(pattern: .XX, initiator: false, s: NoiseKeyPair())
 
-// XX handshake with a different cipher suite
+let (msg1, _) = try initiator.writeMessage()
+let _ = try responder.readMessage(msg1)
+let (msg2, _) = try responder.writeMessage()
+let _ = try initiator.readMessage(msg2)
+let (msg3, initTransport) = try initiator.writeMessage()
+let (_, respTransport) = try responder.readMessage(msg3)
+
+// Encrypted transport
+let ct = try initTransport!.sendCipher.encryptWithAd(Data(), plaintext: "hello".data(using: .utf8)!)
+let pt = try respTransport!.receiveCipher.decryptWithAd(Data(), ciphertext: ct)
+```
+
+To use a different cipher suite, pass the `suite` parameter:
+
+```swift
 let initiator = try HandshakeState(
     pattern: .XX, initiator: true,
     suite: .noise_25519_AESGCM_SHA512,
     s: NoiseKeyPair()
 )
-
-let (msg1, _) = try initiator.writeMessage()
-let _ = try responder.readMessage(msg1)
-let (msg2, _) = try responder.writeMessage()
-let _ = try initiator.readMessage(msg2)
-let (msg3, respTransport) = try initiator.writeMessage()
-let (_, initTransport) = try responder.readMessage(msg3)
-
-// Encrypted transport
-let ct = try respTransport!.sendCipher.encryptWithAd(Data(), "hello".data(using: .utf8)!)
-let pt = try initTransport!.receiveCipher.decryptWithAd(Data(), ct)
 ```
 
 ### Kotlin
@@ -103,23 +106,26 @@ val responder = HandshakeState(
     pattern = HandshakePattern.XX, initiator = false, s = NoiseKeyPair.generate()
 )
 
-// XX handshake with a different cipher suite
+val (msg1, _) = initiator.writeMessage()
+responder.readMessage(msg1)
+val (msg2, _) = responder.writeMessage()
+initiator.readMessage(msg2)
+val (msg3, initTransport) = initiator.writeMessage()
+val (_, respTransport) = responder.readMessage(msg3)
+
+// Encrypted transport
+val ct = initTransport!!.sendCipher.encryptWithAd(ByteArray(0), "hello".toByteArray())
+val pt = respTransport!!.receiveCipher.decryptWithAd(ByteArray(0), ct)
+```
+
+To use a different cipher suite, pass the `suite` parameter:
+
+```kotlin
 val initiator = HandshakeState(
     pattern = HandshakePattern.XX, initiator = true,
     suite = CipherSuite.NOISE_25519_AESGCM_SHA512,
     s = NoiseKeyPair.generate()
 )
-
-val (msg1, _) = initiator.writeMessage()
-responder.readMessage(msg1)
-val (msg2, _) = responder.writeMessage()
-initiator.readMessage(msg2)
-val (msg3, respTransport) = initiator.writeMessage()
-val (_, initTransport) = responder.readMessage(msg3)
-
-// Encrypted transport
-val ct = respTransport!!.sendCipher.encryptWithAd(ByteArray(0), "hello".toByteArray())
-val pt = initTransport!!.receiveCipher.decryptWithAd(ByteArray(0), ct)
 ```
 
 ## Choosing a Pattern

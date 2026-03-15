@@ -174,5 +174,5 @@ cd android && ./gradlew test --tests "com.noise.protocol.BenchmarkTests" --info
 | **Hardware** | Apple M1 | Apple M1 (same machine) |
 | **OS** | macOS 14 | JVM (OpenJDK 21.0.10) |
 | **Crypto** | CryptoKit (hardware-accelerated) | JCA/JCE (JIT-compiled) |
-| **Compiler** | Swift 6.0, Release mode via SPM | Kotlin 2.3.0, JVM target 21 |
+| **Compiler** | Swift 6.1, Release mode via SPM | Kotlin 2.3.0, JVM target 21 |
 | **Iterations** | 5 warmup + 20 measured (handshake), 100 + 1000 (transport) | Same |

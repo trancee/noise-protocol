@@ -87,8 +87,8 @@ let (msg2, respTransport) = try responder.writeMessage(payload: "world".data(usi
 let (payload2, initTransport) = try initiator.readMessage(msg2)
 
 // Transport phase — encrypted bidirectional channel
-let ciphertext = try initTransport!.sendCipher.encryptWithAd(Data(), "secret".data(using: .utf8)!)
-let plaintext = try respTransport!.receiveCipher.decryptWithAd(Data(), ciphertext)
+let ciphertext = try initTransport!.sendCipher.encryptWithAd(Data(), plaintext: "secret".data(using: .utf8)!)
+let plaintext = try respTransport!.receiveCipher.decryptWithAd(Data(), ciphertext: ciphertext)
 ```
 
 ### XX Handshake (Mutual Authentication)
@@ -114,11 +114,11 @@ let _ = try responder.readMessage(msg1)
 let (msg2, _) = try responder.writeMessage()
 let _ = try initiator.readMessage(msg2)
 
-let (msg3, respTransport) = try initiator.writeMessage()
-let (_, initTransport) = try responder.readMessage(msg3)
+let (msg3, initTransport) = try initiator.writeMessage()
+let (_, respTransport) = try responder.readMessage(msg3)
 
 // Both sides now have authenticated transport + remote static keys
-let remoteKey = initTransport!.remoteStaticKey  // initiator's static public key
+let remoteKey = respTransport!.remoteStaticKey  // initiator's static public key
 ```
 
 ### XX with AES-GCM + SHA-512
@@ -268,8 +268,8 @@ struct TransportState {
 ### CipherState
 
 ```swift
-func encryptWithAd(_ ad: Data, _ plaintext: Data) throws -> Data
-func decryptWithAd(_ ad: Data, _ ciphertext: Data) throws -> Data
+func encryptWithAd(_ ad: Data, plaintext: Data) throws -> Data
+func decryptWithAd(_ ad: Data, ciphertext: Data) throws -> Data
 func rekey()
 var hasKey: Bool { get }
 ```
@@ -315,10 +315,14 @@ All errors are `NoiseError` enum cases:
 |-------|-------------|
 | `.decryptionFailed` | AEAD authentication tag mismatch |
 | `.handshakeAlreadyComplete` | Attempted handshake operation after completion |
+| `.handshakeNotComplete` | Accessed transport state before handshake finished |
 | `.notYourTurn` | Called write on a read turn or vice versa |
 | `.invalidMessage` | Handshake message truncated or malformed |
+| `.invalidPayloadSize` | Payload exceeds maximum size (65,535 bytes) |
+| `.invalidPublicKey` | Public key validation failed |
 | `.unknownPattern(name)` | Unknown pattern name in `HandshakePattern.named()` |
 | `.missingKey(detail)` | Required key not provided |
+| `.noKey` | No cipher key set (e.g., rekey before keyed) |
 | `.nonceExhausted` | Nonce counter overflow (2^64 messages) |
 
 ## Testing
@@ -327,7 +331,7 @@ All errors are `NoiseError` enum cases:
 cd ios && swift test
 ```
 
-36 tests total: 9 test vector tests (8 cipher suites × 5 base patterns each, plus PSK and XXfallback for ChaChaPoly_SHA256, validated against cacophony/noise-c canonical vectors from shared `test-vectors/` JSON) + 27 unit tests covering round-trips, error handling, crypto primitives, pattern definitions, and channel binding.
+36 tests total: 9 test vector tests (8 cipher suites × 5 base patterns, plus 2 PSK patterns and XXfallback for ChaChaPoly_SHA256, validated against cacophony/noise-c canonical vectors from shared `test-vectors/` JSON) + 27 unit tests covering round-trips, error handling, crypto primitives, pattern definitions, and channel binding.
 
 ## Architecture
 
