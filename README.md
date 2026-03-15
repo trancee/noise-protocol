@@ -186,6 +186,7 @@ Test vectors cover 8 cipher suites × 5 base patterns (NN, NK, KK, IK, XX) = 40,
 
 - [`ios/README.md`](ios/README.md) — Swift API reference, usage examples, architecture
 - [`android/README.md`](android/README.md) — Kotlin API reference, usage examples, architecture
+- [`BENCHMARK.md`](BENCHMARK.md) — Performance benchmarks for all cipher suites and patterns
 - [`CHANGELOG.md`](CHANGELOG.md) — Version history
 
 ## License
