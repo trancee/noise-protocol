@@ -124,7 +124,7 @@ public final class HandshakeState: @unchecked Sendable {
 
         let pattern = messagePatterns[messageIndex]
         messageIndex += 1
-        var buffer = Data()
+        var buffer = Data(capacity: 256)
 
         for token in pattern {
             switch token {

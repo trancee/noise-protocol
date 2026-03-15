@@ -4,20 +4,21 @@ import Foundation
 /// X25519 Diffie-Hellman key pair for Noise protocol operations.
 public struct NoiseKeyPair: Sendable {
     public let privateKey: Curve25519.KeyAgreement.PrivateKey
-    public var publicKey: Data {
-        Data(privateKey.publicKey.rawRepresentation)
-    }
+    public let publicKey: Data
 
     public init() {
         self.privateKey = .init()
+        self.publicKey = Data(privateKey.publicKey.rawRepresentation)
     }
 
     public init(privateKey: Curve25519.KeyAgreement.PrivateKey) {
         self.privateKey = privateKey
+        self.publicKey = Data(privateKey.publicKey.rawRepresentation)
     }
 
     public init(privateKeyData: Data) throws {
         self.privateKey = try Curve25519.KeyAgreement.PrivateKey(rawRepresentation: privateKeyData)
+        self.publicKey = Data(self.privateKey.publicKey.rawRepresentation)
     }
 
     /// Perform X25519 Diffie-Hellman. Returns DHLEN (32) bytes.

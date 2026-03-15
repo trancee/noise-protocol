@@ -29,12 +29,20 @@ object NoiseHash {
         numOutputs: Int
     ): List<ByteArray> {
         val tempKey = hmacHash(chainingKey, inputKeyMaterial)
-        val output1 = hmacHash(tempKey, byteArrayOf(0x01))
-        val output2 = hmacHash(tempKey, output1 + byteArrayOf(0x02))
+        val output1 = hmacHash(tempKey, COUNTER_01)
+        val input2 = ByteArray(output1.size + 1)
+        System.arraycopy(output1, 0, input2, 0, output1.size)
+        input2[output1.size] = 0x02
+        val output2 = hmacHash(tempKey, input2)
         if (numOutputs == 2) return listOf(output1, output2)
-        val output3 = hmacHash(tempKey, output2 + byteArrayOf(0x03))
+        val input3 = ByteArray(output2.size + 1)
+        System.arraycopy(output2, 0, input3, 0, output2.size)
+        input3[output2.size] = 0x03
+        val output3 = hmacHash(tempKey, input3)
         return listOf(output1, output2, output3)
     }
+
+    private val COUNTER_01 = byteArrayOf(0x01)
 }
 
 /**

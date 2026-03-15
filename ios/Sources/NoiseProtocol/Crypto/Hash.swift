@@ -18,6 +18,10 @@ public enum NoiseHash {
         return Data(hmac)
     }
 
+    private static let counter01 = Data([0x01])
+    private static let counter02 = Data([0x02])
+    private static let counter03 = Data([0x03])
+
     /// HKDF per Noise spec: chaining_key as salt, input_key_material as IKM.
     /// Returns 2 or 3 outputs of HASHLEN bytes.
     public static func hkdf(
@@ -26,10 +30,10 @@ public enum NoiseHash {
         numOutputs: Int
     ) -> [Data] {
         let tempKey = hmacHash(key: chainingKey, data: inputKeyMaterial)
-        let output1 = hmacHash(key: tempKey, data: Data([0x01]))
-        let output2 = hmacHash(key: tempKey, data: output1 + Data([0x02]))
+        let output1 = hmacHash(key: tempKey, data: counter01)
+        let output2 = hmacHash(key: tempKey, data: output1 + counter02)
         if numOutputs == 2 { return [output1, output2] }
-        let output3 = hmacHash(key: tempKey, data: output2 + Data([0x03]))
+        let output3 = hmacHash(key: tempKey, data: output2 + counter03)
         return [output1, output2, output3]
     }
 }

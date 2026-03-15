@@ -99,13 +99,13 @@ class HandshakeState(
 
         val pattern = messagePatterns[messageIndex]
         messageIndex++
-        var buffer = ByteArray(0)
+        val output = java.io.ByteArrayOutputStream(256)
 
         for (token in pattern) {
             when (token) {
                 Token.E -> {
                     if (e == null) e = keyPairGenerator.generate()
-                    buffer += e!!.publicKey
+                    output.write(e!!.publicKey)
                     symmetricState.mixHash(e!!.publicKey)
                     if (symmetricState.hasPSK) {
                         symmetricState.mixKey(e!!.publicKey)
@@ -113,7 +113,7 @@ class HandshakeState(
                 }
                 Token.S -> {
                     val encrypted = symmetricState.encryptAndHash(s!!.publicKey)
-                    buffer += encrypted
+                    output.write(encrypted)
                 }
                 Token.EE -> symmetricState.mixKey(e!!.dh(re!!))
                 Token.ES -> {
@@ -134,7 +134,8 @@ class HandshakeState(
         }
 
         val encryptedPayload = symmetricState.encryptAndHash(payload)
-        buffer += encryptedPayload
+        output.write(encryptedPayload)
+        val buffer = output.toByteArray()
 
         return if (messageIndex >= messagePatterns.size) {
             buffer to finalize()

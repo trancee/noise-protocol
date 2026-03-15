@@ -26,10 +26,16 @@ class CipherSuite(
     /** HKDF derived from hmacHash. */
     fun hkdf(chainingKey: ByteArray, inputKeyMaterial: ByteArray, numOutputs: Int): List<ByteArray> {
         val tempKey = hmacHash(chainingKey, inputKeyMaterial)
-        val output1 = hmacHash(tempKey, byteArrayOf(0x01))
-        val output2 = hmacHash(tempKey, output1 + byteArrayOf(0x02))
+        val output1 = hmacHash(tempKey, COUNTER_01)
+        val input2 = ByteArray(output1.size + 1)
+        System.arraycopy(output1, 0, input2, 0, output1.size)
+        input2[output1.size] = 0x02
+        val output2 = hmacHash(tempKey, input2)
         if (numOutputs == 2) return listOf(output1, output2)
-        val output3 = hmacHash(tempKey, output2 + byteArrayOf(0x03))
+        val input3 = ByteArray(output2.size + 1)
+        System.arraycopy(output2, 0, input3, 0, output2.size)
+        input3[output2.size] = 0x03
+        val output3 = hmacHash(tempKey, input3)
         return listOf(output1, output2, output3)
     }
 
@@ -38,6 +44,8 @@ class CipherSuite(
         "Noise_${pattern}_${dhName}_${cipherName}_${hashName}"
 
     companion object {
+        private val COUNTER_01 = byteArrayOf(0x01)
+
         // Shared DH lambdas for all X25519 suites
         private val x25519Generate: () -> NoiseKeyPair = { NoiseKeyPair.generate() }
         private val x25519DH: (NoiseKeyPair, ByteArray) -> ByteArray = { kp, pub -> kp.dh(pub) }
@@ -84,8 +92,12 @@ class CipherSuite(
         ): ByteArray {
             var k = if (key.size > blocklen) hashFn(key) else key
             if (k.size < blocklen) k = k + ByteArray(blocklen - k.size)
-            val ipad = ByteArray(blocklen) { (k[it].toInt() xor 0x36).toByte() }
-            val opad = ByteArray(blocklen) { (k[it].toInt() xor 0x5c).toByte() }
+            val ipad = ByteArray(blocklen)
+            val opad = ByteArray(blocklen)
+            for (i in 0 until blocklen) {
+                ipad[i] = (k[i].toInt() xor 0x36).toByte()
+                opad[i] = (k[i].toInt() xor 0x5c).toByte()
+            }
             return hashFn(opad + hashFn(ipad + data))
         }
 

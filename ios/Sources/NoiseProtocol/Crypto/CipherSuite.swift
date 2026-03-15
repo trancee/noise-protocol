@@ -26,10 +26,10 @@ public struct CipherSuite: Sendable {
     /// HKDF derived from hmacHash. Built-in, not configurable.
     public func hkdf(chainingKey: Data, inputKeyMaterial: Data, numOutputs: Int) -> [Data] {
         let tempKey = hmacHash(chainingKey, inputKeyMaterial)
-        let output1 = hmacHash(tempKey, Data([0x01]))
-        let output2 = hmacHash(tempKey, output1 + Data([0x02]))
+        let output1 = hmacHash(tempKey, hkdfCounter01)
+        let output2 = hmacHash(tempKey, output1 + hkdfCounter02)
         if numOutputs == 2 { return [output1, output2] }
-        let output3 = hmacHash(tempKey, output2 + Data([0x03]))
+        let output3 = hmacHash(tempKey, output2 + hkdfCounter03)
         return [output1, output2, output3]
     }
 
@@ -38,6 +38,12 @@ public struct CipherSuite: Sendable {
         "Noise_\(pattern)_\(dhName)_\(cipherName)_\(hashName)"
     }
 }
+
+// MARK: - HKDF counter constants (avoid per-call allocation)
+
+private let hkdfCounter01 = Data([0x01])
+private let hkdfCounter02 = Data([0x02])
+private let hkdfCounter03 = Data([0x03])
 
 // MARK: - Generic HMAC for BLAKE2 (RFC 2104)
 
@@ -50,8 +56,12 @@ private func hmac(
     var k = key
     if k.count > blocklen { k = hash(k) }
     if k.count < blocklen { k += Data(repeating: 0, count: blocklen - k.count) }
-    let ipad = Data(k.map { $0 ^ 0x36 })
-    let opad = Data(k.map { $0 ^ 0x5c })
+    var ipad = Data(count: blocklen)
+    var opad = Data(count: blocklen)
+    for i in 0..<blocklen {
+        ipad[i] = k[i] ^ 0x36
+        opad[i] = k[i] ^ 0x5c
+    }
     return hash(opad + hash(ipad + data))
 }
 

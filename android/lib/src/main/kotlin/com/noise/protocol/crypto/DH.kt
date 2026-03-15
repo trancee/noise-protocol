@@ -19,20 +19,18 @@ const val DHLEN = 32
 class NoiseKeyPair private constructor(
     private val javaKeyPair: KeyPair
 ) {
-    val publicKey: ByteArray
-        get() {
-            val pub = javaKeyPair.public as java.security.interfaces.XECPublicKey
-            val u = pub.u
-            val bytes = u.toByteArray()
-            // Convert from big-endian (BigInteger) to little-endian (X25519 wire format)
-            val result = ByteArray(DHLEN)
-            for (i in bytes.indices) {
-                if (i < DHLEN) {
-                    result[i] = bytes[bytes.size - 1 - i]
-                }
+    val publicKey: ByteArray by lazy {
+        val pub = javaKeyPair.public as java.security.interfaces.XECPublicKey
+        val u = pub.u
+        val bytes = u.toByteArray()
+        val result = ByteArray(DHLEN)
+        for (i in bytes.indices) {
+            if (i < DHLEN) {
+                result[i] = bytes[bytes.size - 1 - i]
             }
-            return result
         }
+        result
+    }
 
     /** Perform X25519 Diffie-Hellman. Returns DHLEN (32) bytes. */
     fun dh(remotePublicKey: ByteArray): ByteArray {

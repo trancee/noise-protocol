@@ -26,10 +26,19 @@ All notable changes to this project are documented in this file.
 - HASHLEN truncation for 64-byte hashes (SHA-512, BLAKE2b): `MixKey()` and `Split()` truncate HKDF output to 32 bytes for cipher keys per spec.
 - 43 cross-platform test vectors: 8 cipher suites × 5 base patterns (NN, NK, KK, IK, XX) + 2 PSK patterns (NKpsk0, IKpsk2) for ChaChaPoly_SHA256 + 1 XXfallback — shared JSON files in `test-vectors/`, validated on both platforms.
 - `HandshakeState` accepts optional `suite` parameter (defaults to ChaChaPoly_SHA256 for backward compatibility).
+- Benchmark test suite for all cipher suites × patterns with transport throughput and XXfallback measurements.
+- Comprehensive [BENCHMARK.md](BENCHMARK.md) with cross-platform results and performance analysis.
 
 ### Changed
 
 - Replaced custom BLAKE2s/BLAKE2b implementations with [`blake-hash`](https://github.com/trancee/blake-hash) library (v1.1.0). Added as SPM dependency (iOS) and Maven Central dependency (Android). No API changes — all existing BLAKE2 cipher suites and test vectors are unaffected.
+
+### Performance
+
+- **iOS handshake ~22% faster**: cached DH public key computation, pre-allocated HKDF counter constants, optimized BLAKE2 HMAC ipad/opad loop, pre-sized handshake output buffer.
+- **Android AES-GCM transport 2–3× faster**: `ThreadLocal<Cipher>` instance caching eliminates `Cipher.getInstance()` lookups on every encrypt/decrypt.
+- **Android handshake buffer**: replaced repeated `ByteArray +=` concatenation with `ByteArrayOutputStream` to avoid per-token array copies.
+- **Both platforms**: HKDF uses `System.arraycopy` / pre-allocated constants instead of allocating counter bytes on every call.
 
 ## [2.0.0] — 2026-03-13
 

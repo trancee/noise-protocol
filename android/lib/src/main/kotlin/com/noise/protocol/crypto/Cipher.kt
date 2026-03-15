@@ -6,30 +6,44 @@ import javax.crypto.Cipher
 import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.SecretKeySpec
 
+import java.security.InvalidKeyException
+
 /**
  * ChaCha20-Poly1305 AEAD cipher for Noise protocol.
  * Nonce format: 4 zero bytes + 8 bytes little-endian counter.
  */
 object NoiseCipher {
+    private val cipherLocal = ThreadLocal.withInitial {
+        Cipher.getInstance("ChaCha20-Poly1305")
+    }
+
     /** AEAD encrypt. Returns ciphertext || 16-byte tag. */
     fun encrypt(k: ByteArray, n: Long, ad: ByteArray, plaintext: ByteArray): ByteArray {
-        val cipher = Cipher.getInstance("ChaCha20-Poly1305")
-        val nonce = makeNonce(n)
-        // ChaCha20-Poly1305 uses IvParameterSpec-compatible 12-byte nonce
-        val spec = javax.crypto.spec.IvParameterSpec(nonce)
-        cipher.init(Cipher.ENCRYPT_MODE, SecretKeySpec(k, "ChaCha20-Poly1305"), spec)
+        val cipher = initCipher(Cipher.ENCRYPT_MODE, k, makeNonce(n))
         cipher.updateAAD(ad)
         return cipher.doFinal(plaintext)
     }
 
     /** AEAD decrypt. Throws on authentication failure. */
     fun decrypt(k: ByteArray, n: Long, ad: ByteArray, ciphertext: ByteArray): ByteArray {
-        val cipher = Cipher.getInstance("ChaCha20-Poly1305")
-        val nonce = makeNonce(n)
-        val spec = javax.crypto.spec.IvParameterSpec(nonce)
-        cipher.init(Cipher.DECRYPT_MODE, SecretKeySpec(k, "ChaCha20-Poly1305"), spec)
+        val cipher = initCipher(Cipher.DECRYPT_MODE, k, makeNonce(n))
         cipher.updateAAD(ad)
         return cipher.doFinal(ciphertext)
+    }
+
+    private fun initCipher(mode: Int, k: ByteArray, nonce: ByteArray): Cipher {
+        val spec = javax.crypto.spec.IvParameterSpec(nonce)
+        val key = SecretKeySpec(k, "ChaCha20-Poly1305")
+        var cipher = cipherLocal.get()
+        try {
+            cipher.init(mode, key, spec)
+        } catch (_: InvalidKeyException) {
+            // JCA rejects same key+nonce on reused ChaCha20 instance (rekey scenario)
+            cipher = Cipher.getInstance("ChaCha20-Poly1305")
+            cipherLocal.set(cipher)
+            cipher.init(mode, key, spec)
+        }
+        return cipher
     }
 
     /** ChaChaPoly nonce: 4 zero bytes + 8 bytes little-endian n. */
@@ -47,9 +61,13 @@ object NoiseCipher {
  * Nonce format: 4 zero bytes + 8 bytes big-endian counter.
  */
 object NoiseCipherAESGCM {
+    private val cipherLocal = ThreadLocal.withInitial {
+        Cipher.getInstance("AES/GCM/NoPadding")
+    }
+
     /** AEAD encrypt. Returns ciphertext || 16-byte tag. */
     fun encrypt(k: ByteArray, n: Long, ad: ByteArray, plaintext: ByteArray): ByteArray {
-        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+        val cipher = cipherLocal.get()
         val nonce = makeNonce(n)
         cipher.init(Cipher.ENCRYPT_MODE, SecretKeySpec(k, "AES"), GCMParameterSpec(128, nonce))
         cipher.updateAAD(ad)
@@ -58,7 +76,7 @@ object NoiseCipherAESGCM {
 
     /** AEAD decrypt. Throws on authentication failure. */
     fun decrypt(k: ByteArray, n: Long, ad: ByteArray, ciphertext: ByteArray): ByteArray {
-        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+        val cipher = cipherLocal.get()
         val nonce = makeNonce(n)
         cipher.init(Cipher.DECRYPT_MODE, SecretKeySpec(k, "AES"), GCMParameterSpec(128, nonce))
         cipher.updateAAD(ad)
